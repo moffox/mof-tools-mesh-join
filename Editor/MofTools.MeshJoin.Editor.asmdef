@@ -1,0 +1,6 @@
+{
+  "name": "MofTools.MeshJoin.Editor",
+  "references": ["MofTools.MeshJoin", "nadena.dev.modular-avatar.core", "nadena.dev.ndmf", "nadena.dev.ndmf.runtime", "VRC.SDK3A", "VRC.SDKBase"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

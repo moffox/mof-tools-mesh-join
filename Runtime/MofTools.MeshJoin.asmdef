@@ -1,0 +1,5 @@
+{
+  "name": "MofTools.MeshJoin",
+  "references": ["nadena.dev.modular-avatar.core", "nadena.dev.ndmf.runtime"],
+  "autoReferenced": true
+}

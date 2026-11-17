@@ -1,0 +1,6 @@
+/.validation/
+/obj/
+/bin/
+*.csproj
+*.rsp
+*.log
