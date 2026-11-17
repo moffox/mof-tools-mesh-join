@@ -335,9 +335,9 @@ namespace MofTools.MeshJoin.Tests
             EditorJsonUtility.FromJsonOverwrite(saved,join);
             Check(join.DeleteFaces, "既存の固定削除設定を維持");
             var menu = (AddComponentMenu)Attribute.GetCustomAttribute(typeof(MeshJoin),typeof(AddComponentMenu));
-            Check(menu.componentMenu == "MofTools/MA MOFTOOLS Mesh Join", "Add Componentの英語名");
+            Check(menu.componentMenu == "MofTools/Mof Mesh Join", "Add Componentの英語名");
             var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MeshJoin).Assembly);
-            Check(package.displayName == "MofTools" && package.version == "0.2.0", "MofToolsパッケージ表示とバージョン");
+            Check(package.displayName == "MofTools" && package.version == "0.2.1", "MofToolsパッケージ表示とバージョン");
             string scriptPath = "Packages/" + package.name + "/Mesh Join/Runtime/MeshJoin.cs";
             string iconPath = "Packages/" + package.name + "/Mesh Join/Editor/Icons/MeshJoin.png";
             Check(AssetDatabase.AssetPathToGUID(scriptPath) == "f5094d0c42ae5251ccbbdb59f60ea1fc", "移動後もスクリプトGUIDを維持");

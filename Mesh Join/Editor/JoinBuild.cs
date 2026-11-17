@@ -16,7 +16,7 @@ namespace MofTools.MeshJoin.Editor
     public sealed class JoinPlugin : Plugin<JoinPlugin>
     {
         public override string QualifiedName => "dev.moftools.mesh-join";
-        public override string DisplayName => "MA MOFTOOLS Mesh Join";
+        public override string DisplayName => "Mof Mesh Join";
         protected override void Configure()
         {
             InPhase(BuildPhase.Resolving).BeforePlugin("nadena.dev.modular-avatar")

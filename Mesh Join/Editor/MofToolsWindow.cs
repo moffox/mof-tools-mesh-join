@@ -34,13 +34,13 @@ namespace MofTools.MeshJoin.Editor
             {
                 using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
                 {
-                    EditorGUILayout.LabelField(package.name == "dev.moftools.mesh-join" ? "MA MOFTOOLS Mesh Join" : package.displayName);
+                    EditorGUILayout.LabelField(package.name == "dev.moftools.mesh-join" ? "Mof Mesh Join" : package.displayName);
                     EditorGUILayout.LabelField(package.version, GUILayout.Width(65));
                 }
             }
             EditorGUILayout.Space();
-            EditorGUILayout.HelpBox(JoinLocalization.Text("Add Component → MofTools → MA MOFTOOLS Mesh Join から追加できます。",
-                "Add the component from Add Component → MofTools → MA MOFTOOLS Mesh Join."), MessageType.Info);
+            EditorGUILayout.HelpBox(JoinLocalization.Text("Add Component → MofTools → Mof Mesh Join から追加できます。",
+                "Add the component from Add Component → MofTools → Mof Mesh Join."), MessageType.Info);
         }
     }
 }

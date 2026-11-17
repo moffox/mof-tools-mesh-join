@@ -98,7 +98,6 @@ namespace MofTools.MeshJoin.Editor
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            EditorGUILayout.LabelField("MA MOFTOOLS Mesh Join", EditorStyles.boldLabel);
             Draw("Target", JoinLocalization.Text("結合先", "Target"));
             joinSettingsExpanded = EditorGUILayout.Foldout(joinSettingsExpanded, JoinLocalization.Text("結合設定", "Join Settings"), true);
             if (joinSettingsExpanded)
@@ -124,7 +123,7 @@ namespace MofTools.MeshJoin.Editor
                 Draw("DeleteMask", JoinLocalization.Text("マスクテクスチャー", "Mask Texture"));
                 var color = serializedObject.FindProperty("DeleteColor");
                 color.enumValueIndex = EditorGUILayout.Popup(JoinLocalization.Text("削除モード", "Delete Mode"), color.enumValueIndex,
-                    new[] { JoinLocalization.Text("黒を削除", "Delete Black"), JoinLocalization.Text("白を削除", "Delete White") });
+                    new[] { "Delete Black", "Delete White" });
                 var selection = serializedObject.FindProperty("Selection");
                 selection.enumValueIndex = EditorGUILayout.Popup(JoinLocalization.Text("選択モード", "Selection Mode"), selection.enumValueIndex,
                     new[] { JoinLocalization.Text("任意の頂点", "Any Vertex"), JoinLocalization.Text("すべての頂点", "All Vertices"), JoinLocalization.Text("重心", "Centroid") });

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-11-18
+
+- ツール名を`Mof Mesh Join`に統一。
+- Inspector内の重複する太字タイトルを削除。
+- 削除モードの選択肢を、MAと同じ言語非依存の`Delete Black` / `Delete White`表記へ変更。項目名のローカライズは維持。
+
 ## 0.2.0 — 2026-11-18
 
 - Add Component名を`MofTools/MA MOFTOOLS Mesh Join`に変更。

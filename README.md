@@ -1,4 +1,4 @@
-# MA MOFTOOLS Mesh Join
+# Mof Mesh Join
 
 Unity 2022.3 / Modular Avatar 1.18.7 / NDMF 1.14.8向けの非破壊Editor拡張です。
 元のScene・Prefab・Mesh・Material・AnimationClip・Controllerは変更せず、NDMFが用意するビルド用アバターで処理します。
@@ -7,7 +7,7 @@ Unity 2022.3 / Modular Avatar 1.18.7 / NDMF 1.14.8向けの非破壊Editor拡張
 
 1. MA・NDMF・VRChat Avatars SDKを導入済みのプロジェクトを使用してください。
 2. Package Managerの「Add package from disk」で、このフォルダーの`package.json`を選択します。
-3. アバター配下の追加パーツのSkinnedMeshRendererに、`Add Component > MofTools > MA MOFTOOLS Mesh Join`を追加します。
+3. アバター配下の追加パーツのSkinnedMeshRendererに、`Add Component > MofTools > Mof Mesh Join`を追加します。
 4. 結合先、結合距離、処理順、固定削除マスクを設定します。
 5. ビルドまたはNDMFの処理済み複製で確認してください。通常の編集用アバターのメッシュを直接置き換える機能ではありません。
 
@@ -18,6 +18,8 @@ Unity 2022.3 / Modular Avatar 1.18.7 / NDMF 1.14.8向けの非破壊Editor拡張
 Packagesでは`MofTools > Mesh Join`という構成です。UnityのPackages直下はパッケージ単位で表示されるため、`MofTools`は今回のパッケージの表示名、`Mesh Join`はその中の実フォルダーです。パッケージ識別子・アセンブリ名・スクリプトGUIDは維持しています。
 
 表示と診断メッセージはMA/NDMF共通の言語設定に追従します。日本語と英語に対応し、それ以外は英語になります。MAはUnity Editorの表示言語ではなく、この共通設定を使います。未設定時の初期値はOSの言語です。
+
+削除モードの選択肢はMAと同じ標準Enum表記に合わせ、言語によらず`Delete Black` / `Delete White`と表示します。Inspector内には重複するツール名のタイトルを表示しません。
 
 結合先を指定するMA Mesh Cutter、MA Shape Changerの面削除が別の場所に残っている場合も、二重削除を防ぐためビルドをエラーにします。
 
