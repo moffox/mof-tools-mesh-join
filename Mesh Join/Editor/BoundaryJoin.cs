@@ -14,6 +14,7 @@ namespace MofTools.MeshJoin.Editor
         internal Dictionary<string, float> InitialWeights;
         internal int MatchedVertices, UnmatchedVertices, WeldedVertices;
         internal Vector3[] SeamPositions;
+        internal int PreservedDegenerateFaces;
     }
 
     internal static class BoundaryJoin
@@ -29,7 +30,7 @@ namespace MofTools.MeshJoin.Editor
             if (Mathf.Abs(toBody.determinant) < 1e-12f) throw new InvalidOperationException(JoinLocalization.Text("ゼロスケールのメッシュには対応していません。", "Meshes with a zero scale are not supported."));
             part.Transform(toBody);
             var bt = new JoinMesh.Topology(body); var pt = new JoinMesh.Topology(part);
-            var partEdges = new HashSet<(int, int)>(pt.Edges.Where(e => e.Value == 1).Select(e => e.Key));
+            var partEdges = new HashSet<(int, int)>(pt.Edges.Keys.Where(pt.IsBoundary));
             var bodyGroups = new HashSet<int>(cutEdges.SelectMany(e => new[] { e.Item1, e.Item2 }));
             var partGroups = new HashSet<int>(partEdges.SelectMany(e => new[] { e.Item1, e.Item2 }));
             var match = new Dictionary<int, int>(); var used = new HashSet<int>();
@@ -62,6 +63,9 @@ namespace MofTools.MeshJoin.Editor
             }
             foreach (int key in match.Keys.Except(connected).ToArray()) match.Remove(key);
             if (match.Count == 0) throw new InvalidOperationException(JoinLocalization.Text("結合距離内に、対応する切り口がありません。範囲外の頂点は移動しません。", "No matching boundary is within Join Distance. Out-of-range vertices will not be moved."));
+            if (match.Keys.Any(pt.DegenerateGroups.Contains) || match.Values.Any(bt.DegenerateGroups.Contains))
+                throw new InvalidOperationException(JoinLocalization.Text($"結合境界に同位置の頂点を含む退化面が接しています。{source.name} → {target.name} の境界対応を安全に確定できません。",
+                    $"A degenerate face with coincident vertices touches the join boundary. The correspondence for {source.name} → {target.name} cannot be determined safely."));
             foreach (int g in match.Keys) ValidateGroup(part, pt.Groups[g]);
             foreach (int g in match.Values) ValidateGroup(body, bt.Groups[g]);
 
@@ -176,6 +180,7 @@ namespace MofTools.MeshJoin.Editor
             Compact(output);
             result.Mesh = output.Write(target.sharedMesh.name + " (MofTools Join)"); result.Bones = output.Bones; result.Materials = materials.ToArray();
             result.MatchedVertices = match.Count; result.UnmatchedVertices = partGroups.Count - match.Count;
+            result.PreservedDegenerateFaces = bt.DegenerateFaceCount + pt.DegenerateFaceCount;
             return result;
         }
 

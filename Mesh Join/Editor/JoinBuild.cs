@@ -106,6 +106,9 @@ namespace MofTools.MeshJoin.Editor
                     state.MaterialMaps[target] = slots.Select(i => result.TargetSlots[i]).ToArray();
                     context.AssetSaver.SaveAsset(result.Mesh);
                     Debug.Log(JoinLocalization.Text($"MofTools: {source.name} → {target.name}: 境界{result.MatchedVertices}頂点、実結合{result.WeldedVertices}頂点。", $"MofTools: {source.name} → {target.name}: {result.MatchedVertices} boundary vertices matched, {result.WeldedVertices} vertices physically welded."), target);
+                    if (result.PreservedDegenerateFaces > 0)
+                        Debug.LogWarning(JoinLocalization.Text($"MofTools: 結合対象外の退化面{result.PreservedDegenerateFaces}枚は境界判定から除外し、面・属性・BlendShapeを出力に保持しました。",
+                            $"MofTools: {result.PreservedDegenerateFaces} degenerate faces outside the join boundary were excluded from boundary detection. Their triangles, attributes and BlendShapes were preserved."), target);
                     if (result.UnmatchedVertices > 0) Debug.LogWarning(JoinLocalization.Text($"MofTools: 距離外または対応辺がない境界{result.UnmatchedVertices}頂点は結合せず保持しました。", $"MofTools: {result.UnmatchedVertices} boundary vertices are out of range or lack matching edges. They were preserved without joining."), target);
                     foreach (Transform child in source.transform.Cast<Transform>().ToArray()) child.SetParent(source.transform.parent, true);
                     Object.DestroyImmediate(source.gameObject);

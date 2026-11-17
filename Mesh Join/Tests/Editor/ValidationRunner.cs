@@ -45,6 +45,7 @@ namespace MofTools.MeshJoin.Tests
                 RunCase("境界・UV・法線・ウェイト・BlendShape", Synthetic);
                 RunCase("距離外・曖昧参照・Cutter二重処理", Rejections);
                 RunCase("削除で新しくできた切り口への限定", CutBoundary);
+                RunCase("結合対象外の退化面とBlendShapeを保持", DegenerateFaces);
                 RunCase("複数パーツ・同順位・後側優先", MultipleParts);
                 RunCase("アニメーション移行・競合検出", AnimationCases);
                 RunCase("保存シーンの複製によるNDMFビルド", RealAvatar);
@@ -212,6 +213,48 @@ namespace MofTools.MeshJoin.Tests
                 Check(!runFirst && !runLast, "複数追加Rendererの削除");
             }
             finally { runContext.DeactivateAllExtensionContexts(); runContext.AssetSaver.Dispose(); }
+        }
+
+        private static void DegenerateFaces()
+        {
+            void AddCollapsedFace(SkinnedMeshRenderer renderer, Vector3 origin)
+            {
+                var mesh = renderer.sharedMesh;
+                mesh.vertices = mesh.vertices.Concat(new[] { origin,origin,origin+Vector3.right }).ToArray();
+                mesh.normals = Enumerable.Repeat(Vector3.forward,7).ToArray();
+                mesh.tangents = Enumerable.Repeat(new Vector4(1,0,0,1),7).ToArray();
+                mesh.uv = mesh.vertices.Select(v=>new Vector2(v.x,v.y)).ToArray();
+                mesh.colors = Enumerable.Repeat(Color.white,4).Concat(new[] { Color.red,Color.green,Color.blue }).ToArray();
+                mesh.boneWeights = Enumerable.Repeat(new BoneWeight { boneIndex0=0,weight0=1 },7).ToArray();
+                mesh.triangles = mesh.triangles.Concat(new[] { 4,5,6 }).ToArray();
+                var delta = new Vector3[7]; delta[4]=Vector3.forward; delta[5]=Vector3.up;
+                mesh.AddBlendShapeFrame("Unfold",100,delta,new Vector3[7],new Vector3[7]);
+            }
+            foreach (bool onSource in new[] { true,false })
+            {
+                var root=Root(); var target=Quad(root,"DegenerateBody",0,false); var source=Quad(root,"DegeneratePart",1,false);
+                source.sharedMaterial=target.sharedMaterial;
+                var changed=onSource ? source : target;
+                AddCollapsedFace(changed,new Vector3(5,0,0));
+                var original=changed.sharedMesh.triangles.ToArray();
+                var join=source.gameObject.AddComponent<MeshJoin>(); join.Target.Set(target.gameObject); join.DeleteFaces=false;
+                var result=BoundaryJoin.Merge(target,source,join); Own(result.Mesh);
+                Check(result.MatchedVertices==2,"結合対象外の退化面があっても正常な境界を結合");
+                Check(result.PreservedDegenerateFaces==1 && result.Mesh.triangles.Length==15,"退化面を含むすべての面を出力に保持");
+                Check(changed.sharedMesh.triangles.SequenceEqual(original),"元の退化面を削除しない");
+                var delta=new Vector3[result.Mesh.vertexCount]; var normal=new Vector3[delta.Length]; var tangent=new Vector3[delta.Length];
+                result.Mesh.GetBlendShapeFrameVertices(result.Mesh.GetBlendShapeIndex("Unfold"),0,delta,normal,tangent);
+                var colors=result.Mesh.colors;
+                int red=Array.FindIndex(colors,c=>c==Color.red),green=Array.FindIndex(colors,c=>c==Color.green);
+                Check(red>=0 && green>=0 && delta[red]==Vector3.forward && delta[green]==Vector3.up,"基準形状で潰れている面のBlendShape展開を保持");
+                var topology=new JoinMesh.Topology(JoinMesh.Read(changed));
+                Check(!topology.IsBoundary(JoinMesh.Topology.Edge(topology.GroupOf[4],topology.GroupOf[6])),"退化面から偽の開口辺を生成しない");
+            }
+            var boundaryRoot=Root(); var boundaryTarget=Quad(boundaryRoot,"BoundaryBody",0,false); var boundarySource=Quad(boundaryRoot,"BoundaryPart",1,false);
+            boundarySource.sharedMaterial=boundaryTarget.sharedMaterial;
+            AddCollapsedFace(boundarySource,new Vector3(1,0,0));
+            var boundaryJoin=boundarySource.gameObject.AddComponent<MeshJoin>(); boundaryJoin.Target.Set(boundaryTarget.gameObject); boundaryJoin.DeleteFaces=false;
+            Throws(()=>BoundaryJoin.Merge(boundaryTarget,boundarySource,boundaryJoin),"結合境界に接する曖昧な退化面は安全に停止");
         }
 
         private static void AnimationCases()

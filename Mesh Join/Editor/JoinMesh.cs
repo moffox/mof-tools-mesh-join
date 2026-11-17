@@ -154,7 +154,11 @@ namespace MofTools.MeshJoin.Editor
             internal int[] GroupOf;
             internal readonly Dictionary<(int, int), int> Edges = new Dictionary<(int, int), int>();
             internal readonly Dictionary<(int, int), (int, int)> Directions = new Dictionary<(int, int), (int, int)>();
+            internal readonly HashSet<int> DegenerateGroups = new HashSet<int>();
+            internal readonly HashSet<(int, int)> DegenerateEdges = new HashSet<(int, int)>();
+            internal int DegenerateFaceCount;
             internal static (int, int) Edge(int a, int b) => a < b ? (a, b) : (b, a);
+            internal bool IsBoundary((int, int) edge) => Edges.TryGetValue(edge, out int count) && count == 1 && !DegenerateEdges.Contains(edge);
             internal Topology(JoinMesh mesh)
             {
                 GroupOf = new int[mesh.Count];
@@ -167,20 +171,33 @@ namespace MofTools.MeshJoin.Editor
                 }
                 foreach (var triangles in mesh.Triangles)
                     for (int i = 0; i < triangles.Length; i += 3)
+                    {
+                        int ga = GroupOf[triangles[i]], gb = GroupOf[triangles[i + 1]], gc = GroupOf[triangles[i + 2]];
+                        if (ga == gb || gb == gc || gc == ga)
+                        {
+                            // Keep the original triangle and its attributes. It may open under a BlendShape.
+                            // Such a face supplies no reliable opening edges in the reference shape.
+                            DegenerateFaceCount++;
+                            DegenerateGroups.Add(ga); DegenerateGroups.Add(gb); DegenerateGroups.Add(gc);
+                            if (ga != gb) DegenerateEdges.Add(Edge(ga, gb));
+                            if (gb != gc) DegenerateEdges.Add(Edge(gb, gc));
+                            if (gc != ga) DegenerateEdges.Add(Edge(gc, ga));
+                            continue;
+                        }
                         for (int j = 0; j < 3; j++)
                         {
                             int a = GroupOf[triangles[i + j]], b = GroupOf[triangles[i + (j + 1) % 3]];
-                            if (a == b) throw new InvalidOperationException(JoinLocalization.Text("同位置の頂点を含む退化面があります。境界を安全に判定できません。", "A degenerate face contains coincident vertices. Its boundary cannot be determined safely."));
                             var key = Edge(a, b); Edges.TryGetValue(key, out int n); Edges[key] = n + 1;
                             if (!Directions.ContainsKey(key)) Directions.Add(key, (a, b));
                         }
+                    }
             }
         }
 
         internal HashSet<(int, int)> Cut(MeshJoin settings)
         {
             var before = new Topology(this);
-            if (!settings.DeleteFaces) return new HashSet<(int, int)>(before.Edges.Where(e => e.Value == 1).Select(e => e.Key));
+            if (!settings.DeleteFaces) return new HashSet<(int, int)>(before.Edges.Keys.Where(before.IsBoundary));
             if (!settings.DeleteMask) throw new InvalidOperationException(JoinLocalization.Text("面の固定削除には削除マスクが必要です。", "A mask texture is required to delete faces."));
             if (settings.MaterialSlot < 0 || settings.MaterialSlot >= Triangles.Count) throw new InvalidOperationException(JoinLocalization.Text("削除するマテリアルスロットが範囲外です。", "The material slot selected for deletion is out of range."));
             if (settings.UVChannel < 0 || settings.UVChannel > 7 || UV[settings.UVChannel].Count != Count) throw new InvalidOperationException(JoinLocalization.Text("削除に使用するUVチャンネルがありません。", "The UV channel selected for deletion is missing."));
@@ -198,7 +215,7 @@ namespace MofTools.MeshJoin.Editor
                 Triangles[settings.MaterialSlot] = kept.ToArray();
             }
             var after = new Topology(this);
-            var created = new HashSet<(int, int)>(after.Edges.Where(e => e.Value == 1 && before.Edges.TryGetValue(e.Key, out int n) && n == 2).Select(e => e.Key));
+            var created = new HashSet<(int, int)>(after.Edges.Keys.Where(e => after.IsBoundary(e) && before.Edges.TryGetValue(e, out int n) && n == 2));
             if (created.Count == 0) throw new InvalidOperationException(JoinLocalization.Text("削除によって接続用の境界辺が生成されませんでした。", "Face deletion did not create a boundary for joining."));
             return created;
         }
