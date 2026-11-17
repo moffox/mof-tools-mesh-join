@@ -45,6 +45,7 @@ namespace MofTools.MeshJoin.Tests
                 RunCase("境界・UV・法線・ウェイト・BlendShape", Synthetic);
                 RunCase("距離外・曖昧参照・Cutter二重処理", Rejections);
                 RunCase("削除で新しくできた切り口への限定", CutBoundary);
+                RunCase("非破壊の面削除プレビュー", FacePreview);
                 RunCase("結合対象外の退化面とBlendShapeを保持", DegenerateFaces);
                 RunCase("複数パーツ・同順位・後側優先", MultipleParts);
                 RunCase("アニメーション移行・競合検出", AnimationCases);
@@ -172,6 +173,47 @@ namespace MofTools.MeshJoin.Tests
             Check(result.MatchedVertices == 2, "新しくできた切り口だけに対応");
             Check(result.Mesh.triangles.Length == 12, "削除2面・追加2面");
             Check(result.SeamPositions.All(v => v.x == 1), "既存の外周境界は結合しない");
+        }
+
+        private static void FacePreview()
+        {
+            var root = Root(); var target = Quad(root,"PreviewBody",0,false); var source = Quad(root,"PreviewPart",1,false);
+            var join = source.gameObject.AddComponent<MeshJoin>(); join.Target.Set(target.gameObject); join.DeleteFaces = true;
+            var mask = Own(new Texture2D(2,1,TextureFormat.RGB24,false)); mask.wrapMode = TextureWrapMode.Clamp;
+            mask.SetPixels(new[] { Color.black,Color.white }); mask.Apply(); join.DeleteMask = mask;
+            var mesh = target.sharedMesh; var triangles = mesh.triangles.ToArray(); var uv = mesh.uv.ToArray();
+            var zero = new Vector3[mesh.vertexCount]; mesh.AddBlendShapeFrame("PreviewShape",100,zero,zero,zero);
+            var filter = new FaceDeletionPreview();
+            var context = new nadena.dev.ndmf.preview.ComputeContext("Mesh Join preview validation");
+            var nodeContext = new nadena.dev.ndmf.preview.ComputeContext("Mesh Join preview node validation");
+            nadena.dev.ndmf.preview.IRenderFilterNode node = null;
+            try
+            {
+                var group = filter.GetTargetGroups(context).Single(g => g.Renderers.Contains(target));
+                var proxy = Quad(root,"PreviewProxy",0,false); proxy.sharedMesh = mesh;
+                node = filter.Instantiate(group,new[] { ((Renderer)target,(Renderer)proxy) },nodeContext).GetAwaiter().GetResult();
+                node.OnFrame(target,proxy);
+                var generated = proxy.sharedMesh;
+                Check(generated != mesh && generated.triangles.Length == 3,"プレビュー用コピーから指定面だけ除去");
+                Check(target.sharedMesh == mesh && mesh.triangles.SequenceEqual(triangles),"元Renderer・メッシュを変更しない");
+                Check(generated.vertexCount == mesh.vertexCount && generated.uv.SequenceEqual(uv) && generated.blendShapeCount == 1,"頂点属性・BlendShapeを保持し結合しない");
+                Check(node.WhatChanged == nadena.dev.ndmf.preview.RenderAspects.Mesh,"変更対象はメッシュ表示のみ");
+                node.Dispose(); node = null;
+                Check(!generated,"ノード破棄時に一時メッシュを解放");
+                join.DeleteColor = MaskColor.Black;
+                var black = Own(FaceDeletionPreview.GenerateMesh(mesh,new[] { join }));
+                Check(black.triangles.SequenceEqual(triangles.Take(3)),"削除色変更を反映");
+                join.Selection = FaceSelection.AnyVertex;
+                var all = Own(FaceDeletionPreview.GenerateMesh(mesh,new[] { join }));
+                Check(all.triangles.Length == 0,"選択モードに応じて全削除も表示可能");
+                join.DeleteFaces = false;
+                Check(!FaceDeletionPreview.GenerateMesh(mesh,new[] { join }) && !filter.GetTargetGroups(context).Any(g=>g.Renderers.Contains(target)),"なにもしないではプレビュー対象外");
+                join.DeleteFaces = true; join.UVChannel = 7;
+                Check(!FaceDeletionPreview.GenerateMesh(mesh,new[] { join }),"UV未設定時は元表示を維持");
+                join.UVChannel = 0; join.DeleteMask = null;
+                Check(!FaceDeletionPreview.GenerateMesh(mesh,new[] { join }),"マスク未設定時は元表示を維持");
+            }
+            finally { node?.Dispose(); context.Invalidate(); nodeContext.Invalidate(); }
         }
 
         private static void MultipleParts()
@@ -472,7 +514,7 @@ namespace MofTools.MeshJoin.Tests
             var menu = (AddComponentMenu)Attribute.GetCustomAttribute(typeof(MeshJoin),typeof(AddComponentMenu));
             Check(menu.componentMenu == "MofTools/MA Mesh Join by Mof", "Add Componentの英語名");
             var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MeshJoin).Assembly);
-            Check(package.displayName == "MofTools" && package.version == "0.5.1", "MofToolsパッケージ表示とバージョン");
+            Check(package.displayName == "MofTools" && package.version == "0.6.0", "MofToolsパッケージ表示とバージョン");
             string scriptPath = "Packages/" + package.name + "/Mesh Join/Runtime/MeshJoin.cs";
             string iconPath = "Packages/" + package.name + "/Mesh Join/Editor/Icons/MeshJoin.png";
             Check(AssetDatabase.AssetPathToGUID(scriptPath) == "f5094d0c42ae5251ccbbdb59f60ea1fc", "移動後もスクリプトGUIDを維持");

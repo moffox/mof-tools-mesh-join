@@ -25,7 +25,8 @@ namespace MofTools.MeshJoin.Editor
                 .Run(JoinLocalization.Text("結合先と処理順を確定", "Resolve targets and processing order"), JoinBuild.Prepare);
             InPhase(BuildPhase.Transforming).AfterPlugin("nadena.dev.modular-avatar")
                 .BeforePlugin("nadena.dev.modular-avatar.late-transform-stages")
-                .WithRequiredExtension(typeof(AnimatorServicesContext), s => s.Run(JoinLocalization.Text("固定削除とメッシュ境界結合", "Delete faces and join mesh boundaries"), JoinBuild.Execute));
+                .WithRequiredExtension(typeof(AnimatorServicesContext), s => s.Run(JoinLocalization.Text("固定削除とメッシュ境界結合", "Delete faces and join mesh boundaries"), JoinBuild.Execute)
+                    .PreviewingWith(new FaceDeletionPreview()));
         }
     }
 

@@ -201,23 +201,30 @@ namespace MofTools.MeshJoin.Editor
             if (!settings.DeleteMask) throw new InvalidOperationException(JoinLocalization.Text("面の固定削除には削除マスクが必要です。", "A mask texture is required to delete faces."));
             if (settings.MaterialSlot < 0 || settings.MaterialSlot >= Triangles.Count) throw new InvalidOperationException(JoinLocalization.Text("削除するマテリアルスロットが範囲外です。", "The material slot selected for deletion is out of range."));
             if (settings.UVChannel < 0 || settings.UVChannel > 7 || UV[settings.UVChannel].Count != Count) throw new InvalidOperationException(JoinLocalization.Text("削除に使用するUVチャンネルがありません。", "The UV channel selected for deletion is missing."));
-            using (var mask = new MaskSampler(settings.DeleteMask, settings.DeleteColor))
-            {
-                var uv = UV[settings.UVChannel]; var kept = new List<int>(); var triangles = Triangles[settings.MaterialSlot];
-                for (int i = 0; i < triangles.Length; i += 3)
-                {
-                    var a = uv[triangles[i]]; var b = uv[triangles[i + 1]]; var c = uv[triangles[i + 2]];
-                    bool remove = settings.Selection == FaceSelection.Centroid ? mask.Selected((a + b + c) / 3) :
-                        settings.Selection == FaceSelection.AllVertices ? mask.Selected(a) && mask.Selected(b) && mask.Selected(c) : mask.Selected(a) || mask.Selected(b) || mask.Selected(c);
-                    if (!remove) { kept.Add(triangles[i]); kept.Add(triangles[i + 1]); kept.Add(triangles[i + 2]); }
-                }
-                if (kept.Count == triangles.Length) throw new InvalidOperationException(JoinLocalization.Text("マスクで削除される面がありません。色・UV・スロットを確認してください。", "The mask selects no faces. Check its color, UV channel and material slot."));
-                Triangles[settings.MaterialSlot] = kept.ToArray();
-            }
+            var triangles = Triangles[settings.MaterialSlot];
+            var kept = KeepMaskedFaces(triangles, UV[settings.UVChannel], settings.DeleteMask, settings.DeleteColor, settings.Selection);
+            if (kept.Length == triangles.Length) throw new InvalidOperationException(JoinLocalization.Text("マスクで削除される面がありません。色・UV・スロットを確認してください。", "The mask selects no faces. Check its color, UV channel and material slot."));
+            Triangles[settings.MaterialSlot] = kept;
             var after = new Topology(this);
             var created = new HashSet<(int, int)>(after.Edges.Keys.Where(e => after.IsBoundary(e) && before.Edges.TryGetValue(e, out int n) && n == 2));
             if (created.Count == 0) throw new InvalidOperationException(JoinLocalization.Text("削除によって接続用の境界辺が生成されませんでした。", "Face deletion did not create a boundary for joining."));
             return created;
+        }
+
+        internal static int[] KeepMaskedFaces(int[] triangles, List<Vector4> uv, Texture2D texture, MaskColor color, FaceSelection selection)
+        {
+            using (var mask = new MaskSampler(texture, color))
+            {
+                var kept = new List<int>();
+                for (int i = 0; i < triangles.Length; i += 3)
+                {
+                    var a = uv[triangles[i]]; var b = uv[triangles[i + 1]]; var c = uv[triangles[i + 2]];
+                    bool remove = selection == FaceSelection.Centroid ? mask.Selected((a + b + c) / 3) :
+                        selection == FaceSelection.AllVertices ? mask.Selected(a) && mask.Selected(b) && mask.Selected(c) : mask.Selected(a) || mask.Selected(b) || mask.Selected(c);
+                    if (!remove) { kept.Add(triangles[i]); kept.Add(triangles[i + 1]); kept.Add(triangles[i + 2]); }
+                }
+                return kept.ToArray();
+            }
         }
 
         private sealed class MaskSampler : IDisposable
