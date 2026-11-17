@@ -1,0 +1,6 @@
+{
+  "name": "MofTools.Support.Tests",
+  "references": ["MofTools.Support.Editor"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

@@ -1,4 +1,4 @@
-# Mof Mesh Join
+# MA Mesh Join by Mof
 
 Unity 2022.3 / Modular Avatar 1.18.7 / NDMF 1.14.8向けの非破壊Editor拡張です。
 元のScene・Prefab・Mesh・Material・AnimationClip・Controllerは変更せず、NDMFが用意するビルド用アバターで処理します。
@@ -7,19 +7,29 @@ Unity 2022.3 / Modular Avatar 1.18.7 / NDMF 1.14.8向けの非破壊Editor拡張
 
 1. MA・NDMF・VRChat Avatars SDKを導入済みのプロジェクトを使用してください。
 2. Package Managerの「Add package from disk」で、このフォルダーの`package.json`を選択します。
-3. アバター配下の追加パーツのSkinnedMeshRendererに、`Add Component > MofTools > Mof Mesh Join`を追加します。
+3. アバター配下の追加パーツのSkinnedMeshRendererに、`Add Component > MofTools > MA Mesh Join by Mof`を追加します。
 4. 結合先、結合距離、処理順、固定削除マスクを設定します。
 5. ビルドまたはNDMFの処理済み複製で確認してください。通常の編集用アバターのメッシュを直接置き換える機能ではありません。
 
 初回追加時、同じオブジェクトにある非反転のMA Mesh Cutter 1個とUVマスクフィルター1個を自動移行し、移行したコンポーネントを削除します。Undo可能です。未対応のフィルター、複数Cutter、反転設定は削除しません。後から追加したCutterを自動削除し続ける機能はありません。
 
-`Tools > MofTools`にはインストール済みツールとバージョンを表示するウィンドウがあります。コンポーネントを追加するメニューではありません。
+`Tools > Mof ツール一覧`には、インストール済みツール・バージョン・前提アセットの導入状態を表示するウィンドウがあります。確認専用で、開いてもインストール・設定変更は行いません。
 
 Packagesでは`MofTools > Mesh Join`という構成です。UnityのPackages直下はパッケージ単位で表示されるため、`MofTools`は今回のパッケージの表示名、`Mesh Join`はその中の実フォルダーです。パッケージ識別子・アセンブリ名・スクリプトGUIDは維持しています。
 
 表示と診断メッセージはMA/NDMF共通の言語設定に追従します。日本語と英語に対応し、それ以外は英語になります。MAはUnity Editorの表示言語ではなく、この共通設定を使います。未設定時の初期値はOSの言語です。
 
 削除モードの選択肢はMAと同じ標準Enum表記に合わせ、言語によらず`Delete Black` / `Delete White`と表示します。Inspector内には重複するツール名のタイトルを表示しません。
+
+## 前提アセットの不足
+
+必要な前提アセットはModular Avatar 1.18.7以上・2未満、NDMF 1.14.8以上・2未満、VRChat SDK Avatars/Base 3.10.6以上・4未満です。次のメジャーバージョンのプレリリースも対象外です。
+
+不足・対応範囲外のバージョンを検出した場合、結合機能部分をコンパイル対象から外し、依存のない一覧画面から状態を確認できるようにします。一覧の左端に警告アイコンを表示し、まず「Modular Avatar が導入されていません。」などの具体的なエラー、その後に前提アセットと必要バージョン、最後に「Modular Avatarを導入してください。」などの案内を表示します。
+
+Unityのビルド前処理と、VRChat SDK Baseがある場合のアバタービルド前処理でもチェックして停止します。対応するNDMFがある場合は、MAがなくてもNDMFからの直接処理を開始時にエラーにします。この拡張から不足アセットを自動インストールしたり、パッケージを自動更新することはありません。
+
+依存が不足している間は結合コンポーネントの型も読み込まれないため、既存のコンポーネントがMissing Script表示になる場合があります。元のスクリプト・GUID・シリアライズ項目は変更せず、対応する前提アセットを戻すと読み込み対象へ戻ります。
 
 結合先を指定するMA Mesh Cutter、MA Shape Changerの面削除が別の場所に残っている場合も、二重削除を防ぐためビルドをエラーにします。
 

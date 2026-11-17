@@ -1,12 +1,15 @@
 {
   "name": "dev.moftools.mesh-join",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "displayName": "MofTools",
   "description": "NDMFによる非破壊の固定メッシュ削除・境界結合",
   "unity": "2022.3",
-  "author": { "name": "MofTools" },
+  "author": {
+    "name": "MofTools"
+  },
   "vpmDependencies": {
     "nadena.dev.modular-avatar": ">=1.18.7 <2.0.0-a",
-    "nadena.dev.ndmf": ">=1.14.8 <2.0.0-a"
+    "nadena.dev.ndmf": ">=1.14.8 <2.0.0-a",
+    "com.vrchat.avatars": ">=3.10.6 <4.0.0-a"
   }
 }

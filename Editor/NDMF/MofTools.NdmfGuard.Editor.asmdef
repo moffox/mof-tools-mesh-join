@@ -1,0 +1,10 @@
+{
+  "name": "MofTools.NdmfGuard.Editor",
+  "references": ["MofTools.Support.Editor", "nadena.dev.ndmf"],
+  "includePlatforms": ["Editor"],
+  "defineConstraints": ["MOFTOOLS_NDMF_CALLBACKS"],
+  "versionDefines": [
+    { "name": "nadena.dev.ndmf", "expression": "[1.14.8,2.0.0-a)", "define": "MOFTOOLS_NDMF_CALLBACKS" }
+  ],
+  "autoReferenced": true
+}

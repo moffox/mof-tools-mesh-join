@@ -1,0 +1,6 @@
+{
+  "name": "MofTools.Support.Editor",
+  "references": [],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

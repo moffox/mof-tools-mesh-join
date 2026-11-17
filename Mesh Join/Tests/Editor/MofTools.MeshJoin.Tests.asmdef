@@ -1,6 +1,45 @@
 {
   "name": "MofTools.MeshJoin.Tests",
-  "references": ["MofTools.MeshJoin", "MofTools.MeshJoin.Editor", "nadena.dev.modular-avatar.core", "nadena.dev.ndmf", "nadena.dev.ndmf.runtime", "VRC.SDK3A", "VRC.SDKBase"],
-  "includePlatforms": ["Editor"],
-  "autoReferenced": false
+  "references": [
+    "MofTools.MeshJoin",
+    "MofTools.MeshJoin.Editor",
+    "nadena.dev.modular-avatar.core",
+    "nadena.dev.ndmf",
+    "nadena.dev.ndmf.runtime",
+    "VRC.SDK3A",
+    "VRC.SDKBase",
+    "MofTools.Support.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false,
+  "versionDefines": [
+    {
+      "name": "nadena.dev.modular-avatar",
+      "expression": "[1.18.7,2.0.0-a)",
+      "define": "MOFTOOLS_MA"
+    },
+    {
+      "name": "nadena.dev.ndmf",
+      "expression": "[1.14.8,2.0.0-a)",
+      "define": "MOFTOOLS_NDMF"
+    },
+    {
+      "name": "com.vrchat.avatars",
+      "expression": "[3.10.6,4.0.0-a)",
+      "define": "MOFTOOLS_VRC_AVATARS"
+    },
+    {
+      "name": "com.vrchat.base",
+      "expression": "[3.10.6,4.0.0-a)",
+      "define": "MOFTOOLS_VRC_BASE"
+    }
+  ],
+  "defineConstraints": [
+    "MOFTOOLS_MA",
+    "MOFTOOLS_NDMF",
+    "MOFTOOLS_VRC_AVATARS",
+    "MOFTOOLS_VRC_BASE"
+  ]
 }

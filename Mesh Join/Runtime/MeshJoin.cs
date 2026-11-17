@@ -10,7 +10,7 @@ namespace MofTools.MeshJoin
 
     [DisallowMultipleComponent]
     [RequireComponent(typeof(SkinnedMeshRenderer))]
-    [AddComponentMenu("MofTools/Mof Mesh Join")]
+    [AddComponentMenu("MofTools/MA Mesh Join by Mof")]
     public sealed class MeshJoin : MonoBehaviour, INDMFEditorOnly
     {
         public AvatarObjectReference Target = new AvatarObjectReference();

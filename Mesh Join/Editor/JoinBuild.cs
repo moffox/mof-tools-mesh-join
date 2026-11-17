@@ -16,7 +16,7 @@ namespace MofTools.MeshJoin.Editor
     public sealed class JoinPlugin : Plugin<JoinPlugin>
     {
         public override string QualifiedName => "dev.moftools.mesh-join";
-        public override string DisplayName => "Mof Mesh Join";
+        public override string DisplayName => "MA Mesh Join by Mof";
         protected override void Configure()
         {
             InPhase(BuildPhase.Resolving).BeforePlugin("nadena.dev.modular-avatar")
@@ -43,6 +43,7 @@ namespace MofTools.MeshJoin.Editor
     {
         internal static void Prepare(BuildContext context)
         {
+            MofTools.Editor.ToolDependencies.RequireReady();
             var state = context.GetState<JoinState>();
             var settings = context.AvatarRootObject.GetComponentsInChildren<MeshJoin>(true);
             var sources = new HashSet<GameObject>(settings.Select(s => s.gameObject));
