@@ -35,15 +35,15 @@ namespace MofTools.MeshJoin.Editor
         internal static JoinMesh Read(SkinnedMeshRenderer renderer)
         {
             var mesh = renderer.sharedMesh;
-            if (!mesh) throw new InvalidOperationException("メッシュがありません。");
+            if (!mesh) throw new InvalidOperationException(JoinLocalization.Text("メッシュがありません。", "The mesh is missing."));
             var result = new JoinMesh
             {
                 Positions = mesh.vertices, Normals = mesh.normals, Tangents = mesh.tangents,
                 Colors = mesh.colors, Bones = renderer.bones, Bindposes = mesh.bindposes
             };
-            if (result.Normals.Length != mesh.vertexCount) throw new InvalidOperationException("法線のないメッシュには対応していません。");
+            if (result.Normals.Length != mesh.vertexCount) throw new InvalidOperationException(JoinLocalization.Text("法線のないメッシュには対応していません。", "Meshes without normals are not supported."));
             if (result.Bindposes.Length != result.Bones.Length || result.Bones.Any(b => !b))
-                throw new InvalidOperationException("ボーンとバインド情報が不整合です。");
+                throw new InvalidOperationException(JoinLocalization.Text("ボーンとバインド情報が不整合です。", "Bone references and bind poses are inconsistent."));
             for (int channel = 0; channel < 8; channel++)
             {
                 result.UV[channel] = new List<Vector4>();
@@ -54,7 +54,7 @@ namespace MofTools.MeshJoin.Editor
             }
             for (int slot = 0; slot < mesh.subMeshCount; slot++)
             {
-                if (mesh.GetTopology(slot) != MeshTopology.Triangles) throw new InvalidOperationException("三角形以外のサブメッシュには対応していません。");
+                if (mesh.GetTopology(slot) != MeshTopology.Triangles) throw new InvalidOperationException(JoinLocalization.Text("三角形以外のサブメッシュには対応していません。", "Only triangle submeshes are supported."));
                 result.Triangles.Add(mesh.GetTriangles(slot));
             }
             result.Weights = new List<BoneWeight1>[mesh.vertexCount];
@@ -70,10 +70,10 @@ namespace MofTools.MeshJoin.Editor
                     {
                         var weight = weights[offset++];
                         if (weight.boneIndex < 0 || weight.boneIndex >= result.Bones.Length)
-                            throw new InvalidOperationException("頂点のボーン番号が不正です。");
+                            throw new InvalidOperationException(JoinLocalization.Text("頂点のボーン番号が不正です。", "A vertex has an invalid bone index."));
                         result.Weights[i].Add(weight);
                     }
-                    if (count == 0) throw new InvalidOperationException("ボーンウェイトのない頂点には対応していません。");
+                    if (count == 0) throw new InvalidOperationException(JoinLocalization.Text("ボーンウェイトのない頂点には対応していません。", "Vertices without bone weights are not supported."));
                 }
             }
             for (int i = 0; i < mesh.blendShapeCount; i++)
@@ -170,7 +170,7 @@ namespace MofTools.MeshJoin.Editor
                         for (int j = 0; j < 3; j++)
                         {
                             int a = GroupOf[triangles[i + j]], b = GroupOf[triangles[i + (j + 1) % 3]];
-                            if (a == b) throw new InvalidOperationException("同位置の頂点を含む退化面があります。境界を安全に判定できません。");
+                            if (a == b) throw new InvalidOperationException(JoinLocalization.Text("同位置の頂点を含む退化面があります。境界を安全に判定できません。", "A degenerate face contains coincident vertices. Its boundary cannot be determined safely."));
                             var key = Edge(a, b); Edges.TryGetValue(key, out int n); Edges[key] = n + 1;
                             if (!Directions.ContainsKey(key)) Directions.Add(key, (a, b));
                         }
@@ -181,9 +181,9 @@ namespace MofTools.MeshJoin.Editor
         {
             var before = new Topology(this);
             if (!settings.DeleteFaces) return new HashSet<(int, int)>(before.Edges.Where(e => e.Value == 1).Select(e => e.Key));
-            if (!settings.DeleteMask) throw new InvalidOperationException("面の固定削除には削除マスクが必要です。");
-            if (settings.MaterialSlot < 0 || settings.MaterialSlot >= Triangles.Count) throw new InvalidOperationException("削除するマテリアルスロットが範囲外です。");
-            if (settings.UVChannel < 0 || settings.UVChannel > 7 || UV[settings.UVChannel].Count != Count) throw new InvalidOperationException("削除に使用するUVチャンネルがありません。");
+            if (!settings.DeleteMask) throw new InvalidOperationException(JoinLocalization.Text("面の固定削除には削除マスクが必要です。", "A mask texture is required to delete faces."));
+            if (settings.MaterialSlot < 0 || settings.MaterialSlot >= Triangles.Count) throw new InvalidOperationException(JoinLocalization.Text("削除するマテリアルスロットが範囲外です。", "The material slot selected for deletion is out of range."));
+            if (settings.UVChannel < 0 || settings.UVChannel > 7 || UV[settings.UVChannel].Count != Count) throw new InvalidOperationException(JoinLocalization.Text("削除に使用するUVチャンネルがありません。", "The UV channel selected for deletion is missing."));
             using (var mask = new MaskSampler(settings.DeleteMask, settings.DeleteColor))
             {
                 var uv = UV[settings.UVChannel]; var kept = new List<int>(); var triangles = Triangles[settings.MaterialSlot];
@@ -194,12 +194,12 @@ namespace MofTools.MeshJoin.Editor
                         settings.Selection == FaceSelection.AllVertices ? mask.Selected(a) && mask.Selected(b) && mask.Selected(c) : mask.Selected(a) || mask.Selected(b) || mask.Selected(c);
                     if (!remove) { kept.Add(triangles[i]); kept.Add(triangles[i + 1]); kept.Add(triangles[i + 2]); }
                 }
-                if (kept.Count == triangles.Length) throw new InvalidOperationException("マスクで削除される面がありません。色・UV・スロットを確認してください。");
+                if (kept.Count == triangles.Length) throw new InvalidOperationException(JoinLocalization.Text("マスクで削除される面がありません。色・UV・スロットを確認してください。", "The mask selects no faces. Check its color, UV channel and material slot."));
                 Triangles[settings.MaterialSlot] = kept.ToArray();
             }
             var after = new Topology(this);
             var created = new HashSet<(int, int)>(after.Edges.Where(e => e.Value == 1 && before.Edges.TryGetValue(e.Key, out int n) && n == 2).Select(e => e.Key));
-            if (created.Count == 0) throw new InvalidOperationException("削除によって接続用の境界辺が生成されませんでした。");
+            if (created.Count == 0) throw new InvalidOperationException(JoinLocalization.Text("削除によって接続用の境界辺が生成されませんでした。", "Face deletion did not create a boundary for joining."));
             return created;
         }
 

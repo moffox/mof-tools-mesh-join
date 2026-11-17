@@ -7,6 +7,7 @@ using MofTools.MeshJoin.Editor;
 using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.animator;
+using nadena.dev.ndmf.localization;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.SceneManagement;
@@ -30,6 +31,7 @@ namespace MofTools.MeshJoin.Tests
             int code = 0;
             try
             {
+                RunCase("UI設定・言語・アイコン・パッケージ配置", InterfaceSettings);
                 RunCase("境界・UV・法線・ウェイト・BlendShape", Synthetic);
                 RunCase("距離外・曖昧参照・Cutter二重処理", Rejections);
                 RunCase("削除で新しくできた切り口への限定", CutBoundary);
@@ -152,7 +154,7 @@ namespace MofTools.MeshJoin.Tests
             mesh.boneWeights = Enumerable.Repeat(new BoneWeight { boneIndex0 = 0, weight0 = 1 }, 6).ToArray();
             var texture = Own(new Texture2D(2, 1, TextureFormat.RGB24, false)); texture.wrapMode = TextureWrapMode.Clamp;
             texture.SetPixels(new[] { Color.black, Color.white }); texture.Apply();
-            var join = source.gameObject.AddComponent<MeshJoin>(); join.Target.Set(target.gameObject); join.DeleteMask = texture;
+            var join = source.gameObject.AddComponent<MeshJoin>(); join.Target.Set(target.gameObject); join.DeleteMask = texture; join.DeleteFaces = true;
             source.sharedMaterial = target.sharedMaterial;
             var result = BoundaryJoin.Merge(target, source, join); Own(result.Mesh);
             Check(result.MatchedVertices == 2, "新しくできた切り口だけに対応");
@@ -316,6 +318,46 @@ namespace MofTools.MeshJoin.Tests
         }
         private static string Hash(string path)
         { using (var sha = SHA256.Create()) return Convert.ToBase64String(sha.ComputeHash(File.ReadAllBytes(path))); }
+
+        private static void InterfaceSettings()
+        {
+            var root = Root(); var source = Quad(root,"UI Source",0,false);
+            var join = source.gameObject.AddComponent<MeshJoin>();
+            Check(!join.DeleteFaces, "新規追加時の統合先の処理はなにもしない");
+            Check(MeshJoinInspector.FormatDistance(0.00001f) == "0.00001", "結合距離を指数表記にしない");
+            Check(MeshJoinInspector.FormatDistance(0) == "0", "距離0の小数表示");
+            Check(MeshJoinInspector.TryParseDistance("0.00001",out float distance) && distance == 0.00001f, "小数表記の入力を保存");
+            Check(MeshJoinInspector.TryParseDistance("1e-05",out distance) && MeshJoinInspector.FormatDistance(distance) == "0.00001", "指数入力も通常の小数表記で表示");
+            Check(!MeshJoinInspector.TryParseDistance("NaN",out _) && !MeshJoinInspector.TryParseDistance("Infinity",out _) && !MeshJoinInspector.TryParseDistance("-1",out _), "距離の不正な入力を拒否");
+            join.DeleteFaces = true;
+            string saved = EditorJsonUtility.ToJson(join);
+            join.DeleteFaces = false;
+            EditorJsonUtility.FromJsonOverwrite(saved,join);
+            Check(join.DeleteFaces, "既存の固定削除設定を維持");
+            var menu = (AddComponentMenu)Attribute.GetCustomAttribute(typeof(MeshJoin),typeof(AddComponentMenu));
+            Check(menu.componentMenu == "MofTools/MA MOFTOOLS Mesh Join", "Add Componentの英語名");
+            var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MeshJoin).Assembly);
+            Check(package.displayName == "MofTools" && package.version == "0.2.0", "MofToolsパッケージ表示とバージョン");
+            string scriptPath = "Packages/" + package.name + "/Mesh Join/Runtime/MeshJoin.cs";
+            string iconPath = "Packages/" + package.name + "/Mesh Join/Editor/Icons/MeshJoin.png";
+            Check(AssetDatabase.AssetPathToGUID(scriptPath) == "f5094d0c42ae5251ccbbdb59f60ea1fc", "移動後もスクリプトGUIDを維持");
+            var importer = AssetImporter.GetAtPath(scriptPath) as MonoImporter;
+            Check(importer && AssetDatabase.GetAssetPath(importer.GetIcon()) == iconPath, "コンポーネントアイコン設定");
+            Check(AssetDatabase.AssetPathToGUID(iconPath) != "a8edd5bd1a0a64a40aa99cc09fb5f198", "コピーしたアイコンには固有GUIDを付与");
+            string language = LanguagePrefs.Language;
+            try
+            {
+                LanguagePrefs.Language = "ja-jp";
+                Check(JoinLocalization.Text("結合設定","Join Settings") == "結合設定", "MA言語設定の日本語に追従");
+                try { JoinReferences.Resolve(join,root.transform); } catch (InvalidOperationException e) { Check(e.Message == "結合先が未設定です。", "日本語の診断表示"); }
+                LanguagePrefs.Language = "en-us";
+                Check(JoinLocalization.Text("結合設定","Join Settings") == "Join Settings", "MA言語設定の英語に追従");
+                try { JoinReferences.Resolve(join,root.transform); } catch (InvalidOperationException e) { Check(e.Message == "The target is not set.", "英語の診断表示"); }
+                LanguagePrefs.Language = "fr-fr";
+                Check(JoinLocalization.Text("結合設定","Join Settings") == "Join Settings", "未対応言語は英語");
+            }
+            finally { LanguagePrefs.Language = language; }
+        }
 
         private static void CheckDeformation(SkinnedMeshRenderer renderer, Vector3[] seamPositions)
         {

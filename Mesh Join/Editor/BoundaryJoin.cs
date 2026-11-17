@@ -23,10 +23,10 @@ namespace MofTools.MeshJoin.Editor
             var body = JoinMesh.Read(target); var part = JoinMesh.Read(source);
             foreach (var bone in body.Bones.Concat(part.Bones).Distinct())
                 if (source.transform.IsChildOf(bone) != target.transform.IsChildOf(bone))
-                    throw new InvalidOperationException("片側のRenderer自身がボーン配下にあり、ポーズで結合基準が変わる構成です。Rendererは共通の非変形階層へ配置してください。ボーンのポーズをメッシュへ焼き込む処理は行いません。");
+                    throw new InvalidOperationException(JoinLocalization.Text("片側のRenderer自身がボーン配下にあり、ポーズで結合基準が変わる構成です。Rendererは共通の非変形階層へ配置してください。ボーンのポーズをメッシュへ焼き込む処理は行いません。", "Only one Renderer is parented under a bone, making its join reference pose-dependent. Place both Renderers under a common non-deforming hierarchy. Bone poses are not baked into the mesh."));
             var cutEdges = body.Cut(settings);
             var toBody = target.transform.worldToLocalMatrix * source.transform.localToWorldMatrix;
-            if (Mathf.Abs(toBody.determinant) < 1e-12f) throw new InvalidOperationException("ゼロスケールのメッシュには対応していません。");
+            if (Mathf.Abs(toBody.determinant) < 1e-12f) throw new InvalidOperationException(JoinLocalization.Text("ゼロスケールのメッシュには対応していません。", "Meshes with a zero scale are not supported."));
             part.Transform(toBody);
             var bt = new JoinMesh.Topology(body); var pt = new JoinMesh.Topology(part);
             var partEdges = new HashSet<(int, int)>(pt.Edges.Where(e => e.Value == 1).Select(e => e.Key));
@@ -41,11 +41,11 @@ namespace MofTools.MeshJoin.Editor
                 {
                     var other = target.transform.TransformPoint(body.Positions[bt.Groups[bg][0]]);
                     if (Vector3.Distance(world, other) > settings.JoinDistance) continue;
-                    if (found >= 0) throw new InvalidOperationException("結合距離内に複数の境界頂点があります。対応を一意にできません。");
+                    if (found >= 0) throw new InvalidOperationException(JoinLocalization.Text("結合距離内に複数の境界頂点があります。対応を一意にできません。", "Multiple boundary vertices are within Join Distance. The correspondence is ambiguous."));
                     found = bg;
                 }
                 if (found < 0) continue;
-                if (!used.Add(found)) throw new InvalidOperationException("複数の追加側境界頂点が同じ結合先に対応しています。");
+                if (!used.Add(found)) throw new InvalidOperationException(JoinLocalization.Text("複数の追加側境界頂点が同じ結合先に対応しています。", "Multiple source boundary vertices map to the same target vertex."));
                 match.Add(pg, found);
             }
             // A vertex without a corresponding boundary edge is not a valid seam match.
@@ -53,15 +53,15 @@ namespace MofTools.MeshJoin.Editor
             foreach (var edge in partEdges)
             {
                 if (!match.TryGetValue(edge.Item1, out int a) || !match.TryGetValue(edge.Item2, out int b)) continue;
-                if (!cutEdges.Contains(JoinMesh.Topology.Edge(a, b))) throw new InvalidOperationException("境界の頂点位置は一致しますが、対応する辺構造が異なります。");
+                if (!cutEdges.Contains(JoinMesh.Topology.Edge(a, b))) throw new InvalidOperationException(JoinLocalization.Text("境界の頂点位置は一致しますが、対応する辺構造が異なります。", "Boundary vertex positions match, but their edge topology differs."));
                 var pd = pt.Directions[edge];
                 var bd = bt.Directions[JoinMesh.Topology.Edge(a, b)];
                 if (match[pd.Item1] != bd.Item2 || match[pd.Item2] != bd.Item1)
-                    throw new InvalidOperationException("対応する境界辺の面の向きが一致しません。反転面を確認してください。");
+                    throw new InvalidOperationException(JoinLocalization.Text("対応する境界辺の面の向きが一致しません。反転面を確認してください。", "Matching boundary edges have incompatible face winding. Check for reversed faces."));
                 connected.Add(edge.Item1); connected.Add(edge.Item2);
             }
             foreach (int key in match.Keys.Except(connected).ToArray()) match.Remove(key);
-            if (match.Count == 0) throw new InvalidOperationException("結合距離内に、対応する切り口がありません。範囲外の頂点は移動しません。");
+            if (match.Count == 0) throw new InvalidOperationException(JoinLocalization.Text("結合距離内に、対応する切り口がありません。範囲外の頂点は移動しません。", "No matching boundary is within Join Distance. Out-of-range vertices will not be moved."));
             foreach (int g in match.Keys) ValidateGroup(part, pt.Groups[g]);
             foreach (int g in match.Values) ValidateGroup(body, bt.Groups[g]);
 
@@ -90,7 +90,7 @@ namespace MofTools.MeshJoin.Editor
                 output.UVDimension[channel] = Mathf.Max(body.UVDimension[channel], part.UVDimension[channel]);
                 output.UV[channel] = (body.UV[channel].Count == body.Count ? body.UV[channel] : Enumerable.Repeat(Vector4.zero, body.Count))
                     .Concat(part.UV[channel].Count == part.Count ? part.UV[channel] : Enumerable.Repeat(Vector4.zero, part.Count)).ToList();
-                if (body.UVDimension[channel] != part.UVDimension[channel]) Debug.LogWarning($"MofTools: UV{channel}の構成が異なります。不足する成分・チャンネルは0で補完します。", settings);
+                if (body.UVDimension[channel] != part.UVDimension[channel]) Debug.LogWarning(JoinLocalization.Text($"MofTools: UV{channel}の構成が異なります。不足する成分・チャンネルは0で補完します。", $"MofTools: UV{channel} layouts differ. Missing channels or components are filled with zero."), settings);
             }
             var worldNormal = target.transform.worldToLocalMatrix.transpose;
             var fromWorldNormal = target.transform.localToWorldMatrix.transpose;
@@ -100,7 +100,7 @@ namespace MofTools.MeshJoin.Editor
                 var targetGroup = bt.Groups[pair.Value]; var sourceGroup = pt.Groups[pair.Key]; int winner = offset + sourceGroup[0];
                 var bn = targetGroup.Select(i => worldNormal.MultiplyVector(output.Normals[i]).normalized).Aggregate(Vector3.zero, (a, b) => a + b).normalized;
                 var pn = sourceGroup.Select(i => worldNormal.MultiplyVector(output.Normals[offset + i]).normalized).Aggregate(Vector3.zero, (a, b) => a + b).normalized;
-                if ((bn + pn).sqrMagnitude < 1e-12f) throw new InvalidOperationException("境界法線が正反対で平均できません。面の向きを確認してください。");
+                if ((bn + pn).sqrMagnitude < 1e-12f) throw new InvalidOperationException(JoinLocalization.Text("境界法線が正反対で平均できません。面の向きを確認してください。", "Boundary normals point in opposite directions and cannot be averaged. Check the face orientation."));
                 var normal = fromWorldNormal.MultiplyVector((bn + pn).normalized).normalized;
                 foreach (int i in targetGroup.Concat(sourceGroup.Select(i => i + offset)))
                 {
@@ -145,7 +145,7 @@ namespace MofTools.MeshJoin.Editor
             int[] MapSlots(SkinnedMeshRenderer renderer, JoinMesh mesh, int vertexOffset)
             {
                 if (renderer.sharedMaterials.Length != mesh.Triangles.Count || renderer.sharedMaterials.Any(m => !m))
-                    throw new InvalidOperationException("マテリアル数とサブメッシュ数が不一致、または未設定のマテリアルがあります。");
+                    throw new InvalidOperationException(JoinLocalization.Text("マテリアル数とサブメッシュ数が不一致、または未設定のマテリアルがあります。", "Material and submesh counts differ, or a material slot is empty."));
                 var map = new int[mesh.Triangles.Count];
                 for (int slot = 0; slot < map.Length; slot++)
                 {
@@ -174,7 +174,7 @@ namespace MofTools.MeshJoin.Editor
             }
             foreach (var triangles in output.Triangles) for (int i = 0; i < triangles.Length; i++) triangles[i] = remap[triangles[i]];
             Compact(output);
-            result.Mesh = output.Write(target.sharedMesh.name + " (MofTools結合)"); result.Bones = output.Bones; result.Materials = materials.ToArray();
+            result.Mesh = output.Write(target.sharedMesh.name + " (MofTools Join)"); result.Bones = output.Bones; result.Materials = materials.ToArray();
             result.MatchedVertices = match.Count; result.UnmatchedVertices = partGroups.Count - match.Count;
             return result;
         }
@@ -187,10 +187,10 @@ namespace MofTools.MeshJoin.Editor
             int first = group[0];
             foreach (int i in group.Skip(1))
             {
-                if (!mesh.Weights[first].SequenceEqual(mesh.Weights[i])) throw new InvalidOperationException("同位置の境界頂点に異なるウェイトがあります。UV分割か別面かを安全に判定できません。");
+                if (!mesh.Weights[first].SequenceEqual(mesh.Weights[i])) throw new InvalidOperationException(JoinLocalization.Text("同位置の境界頂点に異なるウェイトがあります。UV分割か別面かを安全に判定できません。", "Coincident boundary vertices have different bone weights. UV splits cannot be distinguished safely from separate surfaces."));
                 foreach (var shape in mesh.Shapes)
                     foreach (var frame in shape.Frames)
-                        if (!frame.Position[first].Equals(frame.Position[i])) throw new InvalidOperationException("同位置の境界頂点に異なるBlendShape変形があります。");
+                        if (!frame.Position[first].Equals(frame.Position[i])) throw new InvalidOperationException(JoinLocalization.Text("同位置の境界頂点に異なるBlendShape変形があります。", "Coincident boundary vertices have different BlendShape deformations."));
             }
         }
         private static bool AttributesEqual(JoinMesh mesh, int a, int b)

@@ -1,7 +1,7 @@
 {
   "name": "dev.moftools.mesh-join",
-  "version": "0.1.0",
-  "displayName": "MofTools Mesh Join",
+  "version": "0.2.0",
+  "displayName": "MofTools",
   "description": "NDMFによる非破壊の固定メッシュ削除・境界結合",
   "unity": "2022.3",
   "author": { "name": "MofTools" },
