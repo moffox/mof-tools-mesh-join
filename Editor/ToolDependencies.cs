@@ -18,7 +18,7 @@ namespace MofTools.Editor
         public string InstalledVersion { get; }
         public bool Installed => !string.IsNullOrEmpty(InstalledVersion);
         public bool Compatible { get; }
-        public string RequiredVersion => $">= {MinimumVersion}, < {MaximumMajor}.0.0-a";
+        public string RequiredVersion => MinimumVersion + "+";
 
         internal DependencyStatus(string packageName, string displayName, string minimumVersion, int maximumMajor, string installedVersion)
         {
@@ -28,20 +28,20 @@ namespace MofTools.Editor
             string numeric = installedVersion.Split('-', '+')[0];
             if (!Version.TryParse(numeric, out var version)) return;
             var minimum = Version.Parse(minimumVersion);
-            Compatible = version >= minimum && version.Major < maximumMajor &&
+            Compatible = version >= minimum &&
                 !(version == minimum && installedVersion.Contains("-"));
         }
 
         public string Error => !Installed
             ? ToolLocalization.Text($"{DisplayName} が導入されていません。", $"{DisplayName} is not installed.")
             : Compatible ? "" : ToolLocalization.Text(
-                $"{DisplayName} {InstalledVersion} は対応範囲外です（必要: {RequiredVersion}）。",
-                $"{DisplayName} {InstalledVersion} is unsupported (required: {RequiredVersion}).");
+                $"{DisplayName} {InstalledVersion} は必要なバージョンより古いため使用できません。",
+                $"{DisplayName} {InstalledVersion} is older than the minimum required version.");
 
         public string Guidance => !Installed
             ? ToolLocalization.Text($"{DisplayName}を導入してください。", $"Please install {DisplayName}.")
             : Compatible ? "" : ToolLocalization.Text(
-                $"{DisplayName}を対応範囲のバージョンに変更してください。", $"Use a supported version of {DisplayName}.");
+                $"{DisplayName} {MinimumVersion}以上を導入してください。", $"Install {DisplayName} {MinimumVersion} or later.");
     }
 
     public static class ToolDependencies
@@ -57,10 +57,8 @@ namespace MofTools.Editor
             { installed.TryGetValue(id, out string version); return new DependencyStatus(id, name, minimum, maximum, version); }
             return new[]
             {
-                Status("nadena.dev.modular-avatar", "Modular Avatar", "1.18.7", 2),
-                Status("nadena.dev.ndmf", "NDMF", "1.14.8", 2),
-                Status("com.vrchat.avatars", "VRChat SDK - Avatars", "3.10.6", 4),
-                Status("com.vrchat.base", "VRChat SDK - Base", "3.10.6", 4)
+                Status("nadena.dev.modular-avatar", "Modular Avatar", "1.18.7", int.MaxValue),
+                Status("nadena.dev.ndmf", "NDMF", "1.14.8", int.MaxValue)
             };
         }
 

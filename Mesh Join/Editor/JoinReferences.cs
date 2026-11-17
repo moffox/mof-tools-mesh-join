@@ -10,7 +10,7 @@ namespace MofTools.MeshJoin.Editor
     {
         internal static Transform Avatar(Component component)
         {
-            return component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(true)?.transform;
+            return nadena.dev.ndmf.runtime.RuntimeUtil.FindAvatarInParents(component.transform);
         }
 
         internal static string Path(Transform root, Transform value)

@@ -64,31 +64,18 @@ namespace MofTools.Editor
                             EditorGUILayout.LabelField(package.version, GUILayout.Width(65));
                         }
                         foreach (var status in missing) EditorGUILayout.LabelField(status.Error, EditorStyles.wordWrappedLabel);
-                        if (meshJoin)
-                        {
-                            EditorGUILayout.Space(3);
-                            EditorGUILayout.LabelField(ToolLocalization.Text("前提アセット", "Required Assets"), EditorStyles.boldLabel);
-                            foreach (var status in dependencies)
-                            {
-                                string version = status.Installed ? status.InstalledVersion : ToolLocalization.Text("未導入", "Not installed");
-                                EditorGUILayout.LabelField($"{status.DisplayName}: {version}", EditorStyles.wordWrappedLabel);
-                                EditorGUILayout.LabelField(ToolLocalization.Text($"必要: {status.RequiredVersion}", $"Required: {status.RequiredVersion}"), EditorStyles.miniLabel);
-                            }
-                        }
                         if (missing.Length > 0)
                         {
                             EditorGUILayout.Space(3);
                             foreach (var status in missing) EditorGUILayout.LabelField(status.Guidance, EditorStyles.wordWrappedLabel);
                         }
                         else if (meshJoin)
-                            EditorGUILayout.LabelField(ToolLocalization.Text("前提アセットは揃っています。", "All required assets are available."), EditorStyles.wordWrappedLabel);
+                            EditorGUILayout.LabelField(ToolLocalization.Text("Add Component → MofTools → MA Mesh Join by Mof から追加できます。",
+                                "Add the component from Add Component → MofTools → MA Mesh Join by Mof."), EditorStyles.wordWrappedLabel);
                     }
                 }
             }
             EditorGUILayout.EndScrollView();
-            if (missingDependencies.Length == 0)
-                EditorGUILayout.HelpBox(ToolLocalization.Text("Add Component → MofTools → MA Mesh Join by Mof から追加できます。",
-                    "Add the component from Add Component → MofTools → MA Mesh Join by Mof."), MessageType.Info);
         }
     }
 }

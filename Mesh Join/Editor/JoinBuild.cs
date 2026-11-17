@@ -6,7 +6,9 @@ using nadena.dev.ndmf;
 using nadena.dev.ndmf.animator;
 using UnityEditor;
 using UnityEngine;
+#if MOFTOOLS_VRC_AVATARS
 using VRC.SDK3.Avatars.Components;
+#endif
 using Object = UnityEngine.Object;
 
 [assembly: ExportsPlugin(typeof(MofTools.MeshJoin.Editor.JoinPlugin))]
@@ -134,8 +136,10 @@ namespace MofTools.MeshJoin.Editor
                     if (iterator.propertyType != SerializedPropertyType.ObjectReference) continue;
                     var obj = iterator.objectReferenceValue;
                     if (obj != entry.Source && obj != entry.Source.gameObject && obj != entry.Source.transform) continue;
+#if MOFTOOLS_VRC_AVATARS
                     if (component is VRCAvatarDescriptor && obj == entry.Source &&
                         (iterator.propertyPath == "VisemeSkinnedMesh" || iterator.propertyPath == "customEyeLookSettings.eyelidsSkinnedMesh")) continue;
+#endif
                     throw new InvalidOperationException(JoinLocalization.Text($"削除する統合元への未対応参照: {component.name}/{component.GetType().Name}.{iterator.propertyPath}。元オブジェクトは削除しません。", $"Unsupported reference to the source: {component.name}/{component.GetType().Name}.{iterator.propertyPath}. The source object will not be removed."));
                 }
             }
@@ -143,6 +147,7 @@ namespace MofTools.MeshJoin.Editor
 
         private static void UpdateDescriptor(GameObject root, SkinnedMeshRenderer source, SkinnedMeshRenderer target, Mesh mesh)
         {
+#if MOFTOOLS_VRC_AVATARS
             foreach (var descriptor in root.GetComponentsInChildren<VRCAvatarDescriptor>(true))
             {
                 if (descriptor.VisemeSkinnedMesh == source) descriptor.VisemeSkinnedMesh = target;
@@ -157,6 +162,7 @@ namespace MofTools.MeshJoin.Editor
                     }
                 descriptor.customEyeLookSettings.eyelidsSkinnedMesh = target;
             }
+#endif
         }
 
         private static void ApplyRendererSettings(SkinnedMeshRenderer source, SkinnedMeshRenderer target)

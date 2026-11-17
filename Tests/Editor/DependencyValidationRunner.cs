@@ -44,11 +44,13 @@ namespace MofTools.Tests
                 versions["nadena.dev.modular-avatar"] = "1.18.7-alpha.1";
                 Check(!ToolDependencies.Evaluate(versions)[0].Compatible, "最低バージョンのプレリリースを拒否");
                 versions["nadena.dev.modular-avatar"] = "2.0.0";
-                Check(!ToolDependencies.Evaluate(versions)[0].Compatible, "対応外のメジャーバージョンを拒否");
+                Check(ToolDependencies.Evaluate(versions)[0].Compatible, "最低バージョン以上ならメジャーバージョンの上限なし");
                 versions["nadena.dev.modular-avatar"] = "1.19.0";
                 Check(ToolDependencies.Evaluate(versions)[0].Compatible, "対応範囲の新バージョンを受理");
                 var empty = ToolDependencies.Evaluate(new Dictionary<string,string>());
-                Check(empty.Length == 4 && empty.All(s => !s.Compatible), "前提アセット全未導入を報告");
+                Check(empty.Length == 2 && empty.All(s => !s.Compatible), "MAとNDMFだけを前提として報告");
+                versions.Remove("com.vrchat.avatars"); versions.Remove("com.vrchat.base");
+                Check(ToolDependencies.Evaluate(versions).All(s => s.Compatible), "VRChat SDKを依存チェック対象にしない");
                 EditorPrefs.SetString("nadena.dev.ndmf.language-selection", "en-us");
                 Check(ToolDependencies.Message(empty).Contains("Please install Modular Avatar."), "依存なしでも英語表示");
                 EditorPrefs.SetString("nadena.dev.ndmf.language-selection", "ja-jp");

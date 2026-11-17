@@ -1,10 +1,21 @@
 {
   "name": "MofTools.VRChatGuard.Editor",
-  "references": ["MofTools.Support.Editor", "VRC.SDKBase.Editor"],
-  "includePlatforms": ["Editor"],
-  "defineConstraints": ["MOFTOOLS_VRC_CALLBACKS"],
+  "references": [
+    "MofTools.Support.Editor",
+    "VRC.SDKBase.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "defineConstraints": [
+    "MOFTOOLS_VRC_CALLBACKS"
+  ],
   "versionDefines": [
-    { "name": "com.vrchat.base", "expression": "[3.0.0,4.0.0-a)", "define": "MOFTOOLS_VRC_CALLBACKS" }
+    {
+      "name": "com.vrchat.base",
+      "expression": "",
+      "define": "MOFTOOLS_VRC_CALLBACKS"
+    }
   ],
   "autoReferenced": true
 }

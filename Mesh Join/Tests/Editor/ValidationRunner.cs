@@ -26,6 +26,16 @@ namespace MofTools.MeshJoin.Tests
 
         public static void Run()
         {
+            if (!Application.isBatchMode)
+            {
+                EditorWindow.GetWindow<SceneView>().Show();
+                EditorApplication.delayCall += Execute;
+            }
+            else Execute();
+        }
+
+        private static void Execute()
+        {
             output = Path.Combine(UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MeshJoin).Assembly).resolvedPath, ".validation");
             Directory.CreateDirectory(output);
             int code = 0;
@@ -337,12 +347,21 @@ namespace MofTools.MeshJoin.Tests
             var menu = (AddComponentMenu)Attribute.GetCustomAttribute(typeof(MeshJoin),typeof(AddComponentMenu));
             Check(menu.componentMenu == "MofTools/MA Mesh Join by Mof", "Add Componentの英語名");
             var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MeshJoin).Assembly);
-            Check(package.displayName == "MofTools" && package.version == "0.3.0", "MofToolsパッケージ表示とバージョン");
+            Check(package.displayName == "MofTools" && package.version == "0.4.0", "MofToolsパッケージ表示とバージョン");
             string scriptPath = "Packages/" + package.name + "/Mesh Join/Runtime/MeshJoin.cs";
             string iconPath = "Packages/" + package.name + "/Mesh Join/Editor/Icons/MeshJoin.png";
             Check(AssetDatabase.AssetPathToGUID(scriptPath) == "f5094d0c42ae5251ccbbdb59f60ea1fc", "移動後もスクリプトGUIDを維持");
             var importer = AssetImporter.GetAtPath(scriptPath) as MonoImporter;
             Check(importer && AssetDatabase.GetAssetPath(importer.GetIcon()) == iconPath, "コンポーネントアイコン設定");
+            EditorPrefs.DeleteKey("MofTools.MeshJoin.SceneIconDefault:" + Application.dataPath);
+            SceneIconDefaults.ApplyOnce();
+            var info = GizmoUtility.GetGizmoInfo().FirstOrDefault(g => (g.script as MonoScript)?.GetClass() == typeof(MeshJoin));
+            Check(info != null && !info.iconEnabled, $"シーンのアイコンを初期状態で非表示 (found={info != null}, hasIcon={info?.hasIcon}, enabled={info?.iconEnabled})");
+            info.iconEnabled = true; GizmoUtility.ApplyGizmoInfo(info, false);
+            SceneIconDefaults.ApplyOnce();
+            info = GizmoUtility.GetGizmoInfo().FirstOrDefault(g => (g.script as MonoScript)?.GetClass() == typeof(MeshJoin));
+            Check(info != null && info.iconEnabled, "後から手動で有効にしたアイコン設定を保持");
+            info.iconEnabled = false; GizmoUtility.ApplyGizmoInfo(info, false);
             Check(AssetDatabase.AssetPathToGUID(iconPath) != "a8edd5bd1a0a64a40aa99cc09fb5f198", "コピーしたアイコンには固有GUIDを付与");
             string language = LanguagePrefs.Language;
             try
