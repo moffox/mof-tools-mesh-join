@@ -98,7 +98,7 @@ namespace MofTools.MeshJoin.Editor
                 finally { settings.MaterialSlot = originalSlot; }
                 try
                 {
-                    JoinAnimation.Rewrite(context.Extension<AnimatorServicesContext>(), target, source, result);
+                    JoinAnimation.Rewrite(context.Extension<AnimatorServicesContext>(), target, source, result, settings.MaterialAnimation);
                     UpdateDescriptor(context.AvatarRootObject, source, target, result.Mesh);
                     target.sharedMesh = result.Mesh; target.bones = result.Bones; target.sharedMaterials = result.Materials;
                     foreach (var weight in result.InitialWeights) target.SetBlendShapeWeight(result.Mesh.GetBlendShapeIndex(weight.Key), weight.Value);

@@ -16,10 +16,15 @@ namespace MofTools.MeshJoin.Editor
             internal EditorCurveBinding Old, New;
             internal bool ObjectCurve, Remove;
             internal string Origin;
+            internal AnimationCurve FloatCurve;
+            internal ObjectReferenceKeyframe[] ObjectKeys;
         }
 
-        internal static void Rewrite(AnimatorServicesContext services, SkinnedMeshRenderer target, SkinnedMeshRenderer source, JoinResult result)
+        internal static void Rewrite(AnimatorServicesContext services, SkinnedMeshRenderer target, SkinnedMeshRenderer source, JoinResult result,
+            MaterialAnimationMode materialAnimation = MaterialAnimationMode.DoNotOverwrite)
         {
+            if (!Enum.IsDefined(typeof(MaterialAnimationMode), materialAnimation))
+                throw new InvalidOperationException(JoinLocalization.Text("マテリアルのアニメーション設定が不正です。", "Invalid material animation setting."));
             var remapper = services.ObjectPathRemapper;
             var targetPaths = new HashSet<string>(remapper.GetAllPathsForObject(target.gameObject));
             var sourcePaths = new HashSet<string>(remapper.GetAllPathsForObject(source.gameObject));
@@ -35,8 +40,16 @@ namespace MofTools.MeshJoin.Editor
                 foreach (var binding in clip.GetFloatCurveBindings()) Plan(clip, binding, false);
                 foreach (var binding in clip.GetObjectCurveBindings()) Plan(clip, binding, true);
             }
-            // Different states/clips of one original binding are legal. Distinct original bindings
-            // collapsing to one destination have potentially independent drivers and must not be overwritten.
+            // Priority is decided per property across every reachable state and layer.
+            foreach (var group in edits.Where(e => !e.Remove && e.New.propertyName.StartsWith("material.", StringComparison.Ordinal))
+                         .GroupBy(e => e.New.propertyName))
+            {
+                if (!group.Any(e => e.Origin.StartsWith("source:", StringComparison.Ordinal)) ||
+                    !group.Any(e => e.Origin.StartsWith("target:", StringComparison.Ordinal))) continue;
+                string losingSide = materialAnimation == MaterialAnimationMode.PreferTarget ? "source:" : "target:";
+                foreach (var edit in group.Where(e => e.Origin.StartsWith(losingSide, StringComparison.Ordinal))) edit.Remove = true;
+            }
+            // Keep strict conflict handling for BlendShapes and material-slot swaps.
             foreach (var group in edits.Where(e => !e.Remove).GroupBy(e => (e.New.propertyName, e.ObjectCurve)))
                 if (group.Select(e => e.Origin).Distinct().Count() > 1)
                     throw new InvalidOperationException(JoinLocalization.Text($"アニメーション競合: {destination}/{group.Key.propertyName}へ異なる元プロパティの駆動が集約されます。ステート・レイヤー間の排他性は推測しません。", $"Animation conflict: independent source properties map to {destination}/{group.Key.propertyName}. Exclusivity between states or layers is not assumed."));
@@ -49,21 +62,18 @@ namespace MofTools.MeshJoin.Editor
                     if (elements.TryGetValue(sourcePath, out float sourceWeight) && elements.TryGetValue(destination, out float targetWeight) && sourceWeight != targetWeight)
                         throw new InvalidOperationException(JoinLocalization.Text("移行元と統合先のAvatarMask設定が異なり、アニメーションの適用範囲を維持できません。", "The source and target AvatarMask settings differ. The animation scope cannot be preserved."));
             }
-            foreach (var edit in edits)
+            // Snapshot all curves before clearing bindings: both sides can exist in the same clip.
+            foreach (var edit in edits.Where(e => !e.Remove))
             {
-                if (edit.ObjectCurve)
-                {
-                    var curve = edit.Clip.GetObjectCurve(edit.Old);
-                    edit.Clip.SetObjectCurve(edit.Old, null);
-                    if (!edit.Remove) edit.Clip.SetObjectCurve(edit.New, curve);
-                }
-                else
-                {
-                    var curve = edit.Clip.GetFloatCurve(edit.Old);
-                    edit.Clip.SetFloatCurve(edit.Old, null);
-                    if (!edit.Remove) edit.Clip.SetFloatCurve(edit.New, curve);
-                }
+                if (edit.ObjectCurve) edit.ObjectKeys = edit.Clip.GetObjectCurve(edit.Old);
+                else edit.FloatCurve = edit.Clip.GetFloatCurve(edit.Old);
             }
+            foreach (var edit in edits)
+                if (edit.ObjectCurve) edit.Clip.SetObjectCurve(edit.Old, null);
+                else edit.Clip.SetFloatCurve(edit.Old, null);
+            foreach (var edit in edits.Where(e => !e.Remove))
+                if (edit.ObjectCurve) edit.Clip.SetObjectCurve(edit.New, edit.ObjectKeys);
+                else edit.Clip.SetFloatCurve(edit.New, edit.FloatCurve);
 
             void Plan(VirtualClip clip, EditorCurveBinding binding, bool objectCurve)
             {
@@ -96,7 +106,11 @@ namespace MofTools.MeshJoin.Editor
                         next.propertyName = $"m_Materials.Array.data[{map[index]}]";
                     }
                     else if (binding.propertyName.StartsWith("material.", StringComparison.Ordinal))
-                        throw new InvalidOperationException(JoinLocalization.Text($"Renderer全体のマテリアルプロパティ操作「{binding.propertyName}」は統合で影響範囲が変わるため移行できません。スロット差し替えには対応しています。", $"Renderer-wide material animation {binding.propertyName} cannot be migrated because merging changes its scope. Material-slot swaps are supported."));
+                    {
+                        if (materialAnimation == MaterialAnimationMode.DoNotOverwrite)
+                            throw new InvalidOperationException(JoinLocalization.Text($"マテリアルのアニメーションが「上書きしない」のため停止しました: {binding.propertyName}。移行する場合は結合設定で統合先または統合元の優先を選択してください。統合先の他のマテリアルにも作用する可能性があります。",
+                                $"Material Animation is set to Do Not Overwrite: {binding.propertyName}. Select Prefer Target or Prefer Source in Join Settings to migrate it. Other materials on the target may also be affected."));
+                    }
                     else if (fromSource) throw new InvalidOperationException(JoinLocalization.Text($"統合元Rendererの未対応アニメーションです: {binding.propertyName}", $"Unsupported source Renderer animation: {binding.propertyName}"));
                     else return;
                 }

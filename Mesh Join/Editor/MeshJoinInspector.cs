@@ -106,6 +106,7 @@ namespace MofTools.MeshJoin.Editor
                 {
                     DrawDistance();
                     Draw("Order", JoinLocalization.Text("処理順", "Processing Order"));
+                    DrawMaterialAnimation();
                 }
             }
             var operation = serializedObject.FindProperty("DeleteFaces");
@@ -136,6 +137,24 @@ namespace MofTools.MeshJoin.Editor
         }
 
         private void Draw(string name, string label) { EditorGUILayout.PropertyField(serializedObject.FindProperty(name), new GUIContent(label)); }
+
+        private void DrawMaterialAnimation()
+        {
+            var property = serializedObject.FindProperty("MaterialAnimation");
+            var rect = EditorGUILayout.GetControlRect();
+            var label = new GUIContent(JoinLocalization.Text("マテリアルのアニメーション", "Material Animation"));
+            EditorGUI.BeginProperty(rect, label, property);
+            EditorGUI.BeginChangeCheck();
+            int selected = EditorGUI.Popup(rect, label.text, property.enumValueIndex, new[] {
+                JoinLocalization.Text("上書きしない", "Do Not Overwrite"),
+                JoinLocalization.Text("統合先を優先して上書きする", "Overwrite, Prefer Target"),
+                JoinLocalization.Text("統合元を優先して上書きする", "Overwrite, Prefer Source") });
+            if (EditorGUI.EndChangeCheck()) property.enumValueIndex = selected;
+            EditorGUI.EndProperty();
+            EditorGUILayout.HelpBox(JoinLocalization.Text(
+                "上書きしない場合、material.*のアニメーションがあると処理を停止します。上書きする場合は統合先の他のマテリアルにも作用する可能性があります。同じプロパティが両側にあると、全ステート・レイヤーから優先しない側のカーブを除去します。除去したステートで優先側のアニメーションを代わりに再生する処理は行いません。複数パーツは処理順に適用します。",
+                "Do Not Overwrite stops the build if material.* animation is present. Overwriting may also affect other materials on the target. If both sides animate the same property, curves on the non-preferred side are removed across all states and layers; they are not replaced by playback of the preferred animation in those states. Multiple parts are processed in order."), MessageType.Info);
+        }
 
         internal static string FormatDistance(float value)
         {

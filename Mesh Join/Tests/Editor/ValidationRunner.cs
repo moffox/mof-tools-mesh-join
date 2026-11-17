@@ -48,6 +48,7 @@ namespace MofTools.MeshJoin.Tests
                 RunCase("結合対象外の退化面とBlendShapeを保持", DegenerateFaces);
                 RunCase("複数パーツ・同順位・後側優先", MultipleParts);
                 RunCase("アニメーション移行・競合検出", AnimationCases);
+                RunCase("マテリアルアニメーションの優先・競合解決", MaterialAnimationCases);
                 RunCase("保存シーンの複製によるNDMFビルド", RealAvatar);
                 Results.Add($"PASS: {checks} checks");
             }
@@ -298,6 +299,79 @@ namespace MofTools.MeshJoin.Tests
             finally { context.DeactivateAllExtensionContexts(); context.AssetSaver.Dispose(); }
         }
 
+        private static void MaterialAnimationCases()
+        {
+            foreach (MaterialAnimationMode mode in Enum.GetValues(typeof(MaterialAnimationMode)))
+            {
+                var root = Root(); var target = Quad(root, "PriorityBody", 0, false); var source = Quad(root, "PriorityPart", 1, false);
+                source.sharedMaterial = target.sharedMaterial;
+                var join = source.gameObject.AddComponent<MeshJoin>(); join.Target.Set(target.gameObject);
+                Check(join.MaterialAnimation == MaterialAnimationMode.DoNotOverwrite, "新規・既存データの初期値は上書きしない");
+                var result = BoundaryJoin.Merge(target, source, join); Own(result.Mesh);
+                var context = new BuildContext(root, null);
+                var services = context.ActivateExtensionContextRecursive<AnimatorServicesContext>();
+                try
+                {
+                    var cc = services.ControllerContext;
+                    var controller = VirtualAnimatorController.Create(cc.CloneContext, "Priority"); cc.Controllers["priority"] = controller;
+                    var layer = controller.AddLayer(LayerPriority.Default, "Priority");
+                    var sm = VirtualStateMachine.Create(cc.CloneContext, "States"); layer.StateMachine = sm;
+                    var otherLayer = controller.AddLayer(LayerPriority.Default, "Other");
+                    var otherStates = VirtualStateMachine.Create(cc.CloneContext, "Other States"); otherLayer.StateMachine = otherStates;
+                    var sameClip = VirtualClip.Create("Both Sides"); sm.AddState("Both", sameClip);
+                    var targetClip = VirtualClip.Create("Target State"); otherStates.AddState("Target", targetClip);
+                    var sourceClip = VirtualClip.Create("Source State"); sm.AddState("Source", sourceClip);
+                    EditorCurveBinding Binding(string path, string property) => EditorCurveBinding.FloatCurve(path, typeof(SkinnedMeshRenderer), property);
+                    var targetColor = Binding("PriorityBody", "material._Color.r");
+                    var sourceColor = Binding("PriorityPart", "material._Color.r");
+                    sameClip.SetFloatCurve(targetColor, AnimationCurve.Linear(0,.2f,1,.4f));
+                    sameClip.SetFloatCurve(sourceColor, AnimationCurve.Linear(0,.8f,1,1));
+                    targetClip.SetFloatCurve(targetColor, AnimationCurve.Constant(0,1,.3f));
+                    sourceClip.SetFloatCurve(sourceColor, AnimationCurve.Constant(0,1,.9f));
+                    var sourceOnly = Binding("PriorityPart", "material._Metallic");
+                    var targetOnly = Binding("PriorityBody", "material._Glossiness");
+                    sameClip.SetFloatCurve(sourceOnly, AnimationCurve.Constant(0,1,.6f));
+                    sameClip.SetFloatCurve(targetOnly, AnimationCurve.Constant(0,1,.7f));
+                    var unrelated = Binding("Unrelated", "material._Color.r");
+                    sameClip.SetFloatCurve(unrelated, AnimationCurve.Constant(0,1,.1f));
+                    var sourceTexture = EditorCurveBinding.PPtrCurve("PriorityPart", typeof(SkinnedMeshRenderer), "material._MainTex");
+                    var targetTexture = EditorCurveBinding.PPtrCurve("PriorityBody", typeof(SkinnedMeshRenderer), "material._MainTex");
+                    var textureA = Own(new Texture2D(1,1)); var textureB = Own(new Texture2D(1,1));
+                    sameClip.SetObjectCurve(targetTexture, new[] { new ObjectReferenceKeyframe { time=0, value=textureA } });
+                    sameClip.SetObjectCurve(sourceTexture, new[] { new ObjectReferenceKeyframe { time=0, value=textureB } });
+                    if (mode == MaterialAnimationMode.DoNotOverwrite)
+                    {
+                        Throws(() => JoinAnimation.Rewrite(services,target,source,result,mode), "上書きしない場合はマテリアル操作を拒否");
+                        Check(sameClip.GetFloatCurve(targetColor) != null && sameClip.GetFloatCurve(sourceColor) != null, "失敗時はカーブを変更しない");
+                        continue;
+                    }
+                    JoinAnimation.Rewrite(services,target,source,result,mode);
+                    bool preferTarget = mode == MaterialAnimationMode.PreferTarget;
+                    var curve = sameClip.GetFloatCurve(targetColor);
+                    Check(Mathf.Approximately(curve.Evaluate(0), preferTarget ? .2f : .8f) &&
+                          Mathf.Approximately(curve.Evaluate(1), preferTarget ? .4f : 1), "同一Clipで優先側のカーブとキーを保持");
+                    Check(sameClip.GetFloatCurve(sourceColor) == null, "統合元のパスを除去");
+                    Check((targetClip.GetFloatCurve(targetColor) != null) == preferTarget &&
+                          (sourceClip.GetFloatCurve(targetColor) != null) == !preferTarget, "全ステート・レイヤーから負けた側だけ除去し代替再生を追加しない");
+                    Check(sameClip.GetFloatCurve(Binding("PriorityBody", "material._Metallic")) != null &&
+                          sameClip.GetFloatCurve(targetOnly) != null, "片側だけにあるプロパティは両方保持");
+                    Check(Mathf.Approximately(sameClip.GetFloatCurve(unrelated).Evaluate(0), .1f), "無関係なRendererを変更しない");
+                    Check(sameClip.GetObjectCurve(targetTexture).Single().value == (preferTarget ? textureA : textureB) &&
+                          !sameClip.GetObjectCurveBindings().Contains(sourceTexture), "テクスチャ参照も優先側を保持して移行");
+                    var nextSource = Quad(root,"NextPart",1,false); nextSource.sharedMaterial = target.sharedMaterial;
+                    var nextClip = VirtualClip.Create("Next Part"); sm.AddState("Next", nextClip);
+                    var nextBinding = Binding("NextPart", "material._Color.r");
+                    nextClip.SetFloatCurve(nextBinding, AnimationCurve.Constant(0,1,.5f));
+                    var nextJoin = nextSource.gameObject.AddComponent<MeshJoin>(); nextJoin.Target.Set(target.gameObject);
+                    var nextResult = BoundaryJoin.Merge(target,nextSource,nextJoin); Own(nextResult.Mesh);
+                    JoinAnimation.Rewrite(services,target,nextSource,nextResult,mode);
+                    Check((sameClip.GetFloatCurve(targetColor) != null) == preferTarget &&
+                          (nextClip.GetFloatCurve(targetColor) != null) == !preferTarget, "複数パーツは処理順で優先設定を適用");
+                }
+                finally { context.DeactivateAllExtensionContexts(); context.AssetSaver.Dispose(); }
+            }
+        }
+
         private static void RealAvatar()
         {
             var paths = new[] { "Assets/New Scene.unity", "Assets/BodyParts/Body_Parts.prefab", "Assets/BodyParts/Body_Parts.fbx", "Assets/Mofuaki/Chalo/Chalo1.prefab", "Assets/Mofuaki/Chalo/FBX/Chalo.fbx", "Assets/BodyParts/New Animation.anim", "Assets/BodyParts/New Animator Controller.controller" };
@@ -390,7 +464,7 @@ namespace MofTools.MeshJoin.Tests
             var menu = (AddComponentMenu)Attribute.GetCustomAttribute(typeof(MeshJoin),typeof(AddComponentMenu));
             Check(menu.componentMenu == "MofTools/MA Mesh Join by Mof", "Add Componentの英語名");
             var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MeshJoin).Assembly);
-            Check(package.displayName == "MofTools" && package.version == "0.4.0", "MofToolsパッケージ表示とバージョン");
+            Check(package.displayName == "MofTools" && package.version == "0.5.0", "MofToolsパッケージ表示とバージョン");
             string scriptPath = "Packages/" + package.name + "/Mesh Join/Runtime/MeshJoin.cs";
             string iconPath = "Packages/" + package.name + "/Mesh Join/Editor/Icons/MeshJoin.png";
             Check(AssetDatabase.AssetPathToGUID(scriptPath) == "f5094d0c42ae5251ccbbdb59f60ea1fc", "移動後もスクリプトGUIDを維持");

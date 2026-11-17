@@ -7,6 +7,7 @@ namespace MofTools.MeshJoin
 {
     public enum MaskColor { Black, White }
     public enum FaceSelection { AnyVertex, AllVertices, Centroid }
+    public enum MaterialAnimationMode { DoNotOverwrite, PreferTarget, PreferSource }
 
     [DisallowMultipleComponent]
     [RequireComponent(typeof(SkinnedMeshRenderer))]
@@ -16,6 +17,7 @@ namespace MofTools.MeshJoin
         public AvatarObjectReference Target = new AvatarObjectReference();
         [Min(0)] public float JoinDistance = 0.00001f;
         public int Order;
+        public MaterialAnimationMode MaterialAnimation;
         public bool DeleteFaces;
         public Texture2D DeleteMask;
         [Min(0)] public int MaterialSlot;
