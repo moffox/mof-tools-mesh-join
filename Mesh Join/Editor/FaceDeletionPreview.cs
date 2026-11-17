@@ -28,7 +28,7 @@ namespace MofTools.MeshJoin.Editor
                 foreach (var join in context.GetComponentsInChildren<MeshJoin>(root, true))
                 {
                     context.Observe(join);
-                    if (!join.DeleteFaces || !join.DeleteMask) continue;
+                    if (!join.DeleteFaces || !join.DeleteMask || !context.ActiveInHierarchy(join.gameObject)) continue;
                     try
                     {
                         var target = JoinReferences.Resolve(join, root.transform);
@@ -65,7 +65,7 @@ namespace MofTools.MeshJoin.Editor
             {
                 foreach (var join in joins)
                 {
-                    if (!join || !join.DeleteFaces || !join.DeleteMask || join.MaterialSlot < 0 ||
+                    if (!join || !join.gameObject.activeInHierarchy || !join.DeleteFaces || !join.DeleteMask || join.MaterialSlot < 0 ||
                         join.MaterialSlot >= mesh.subMeshCount || join.UVChannel < 0 || join.UVChannel > 7 ||
                         mesh.GetTopology(join.MaterialSlot) != MeshTopology.Triangles) continue;
                     var uv = new List<Vector4>(); mesh.GetUVs(join.UVChannel, uv);
