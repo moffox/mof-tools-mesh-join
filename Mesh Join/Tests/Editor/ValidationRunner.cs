@@ -341,8 +341,16 @@ namespace MofTools.MeshJoin.Tests
                     sameClip.SetObjectCurve(sourceTexture, new[] { new ObjectReferenceKeyframe { time=0, value=textureB } });
                     if (mode == MaterialAnimationMode.DoNotOverwrite)
                     {
-                        Throws(() => JoinAnimation.Rewrite(services,target,source,result,mode), "上書きしない場合はマテリアル操作を拒否");
-                        Check(sameClip.GetFloatCurve(targetColor) != null && sameClip.GetFloatCurve(sourceColor) != null, "失敗時はカーブを変更しない");
+                        JoinAnimation.Rewrite(services,target,source,result,mode);
+                        Check(sameClip.GetFloatCurve(sourceColor) == null && sourceClip.GetFloatCurve(sourceColor) == null &&
+                              sameClip.GetFloatCurve(sourceOnly) == null, "上書きしない場合は競合の有無によらず統合元のカーブを破棄");
+                        Check(Mathf.Approximately(sameClip.GetFloatCurve(targetColor).Evaluate(0), .2f) &&
+                              Mathf.Approximately(targetClip.GetFloatCurve(targetColor).Evaluate(0), .3f), "統合先の既存カーブを全ステート・レイヤーで保持");
+                        Check(sameClip.GetFloatCurve(targetOnly) != null && sameClip.GetFloatCurve(unrelated) != null, "統合先だけの操作と無関係なRendererを保持");
+                        Check(!sameClip.GetObjectCurveBindings().Contains(sourceTexture) &&
+                              sameClip.GetObjectCurve(targetTexture).Single().value == textureA, "統合元のテクスチャ参照を破棄して統合先を保持");
+                        Check(sameClip.GetFloatCurve(EditorCurveBinding.FloatCurve("PriorityBody", typeof(SkinnedMeshRenderer), "material._Metallic")) == null,
+                              "破棄した統合元だけのプロパティを統合先へ移行しない");
                         continue;
                     }
                     JoinAnimation.Rewrite(services,target,source,result,mode);
@@ -464,7 +472,7 @@ namespace MofTools.MeshJoin.Tests
             var menu = (AddComponentMenu)Attribute.GetCustomAttribute(typeof(MeshJoin),typeof(AddComponentMenu));
             Check(menu.componentMenu == "MofTools/MA Mesh Join by Mof", "Add Componentの英語名");
             var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(MeshJoin).Assembly);
-            Check(package.displayName == "MofTools" && package.version == "0.5.0", "MofToolsパッケージ表示とバージョン");
+            Check(package.displayName == "MofTools" && package.version == "0.5.1", "MofToolsパッケージ表示とバージョン");
             string scriptPath = "Packages/" + package.name + "/Mesh Join/Runtime/MeshJoin.cs";
             string iconPath = "Packages/" + package.name + "/Mesh Join/Editor/Icons/MeshJoin.png";
             Check(AssetDatabase.AssetPathToGUID(scriptPath) == "f5094d0c42ae5251ccbbdb59f60ea1fc", "移動後もスクリプトGUIDを維持");

@@ -108,8 +108,10 @@ namespace MofTools.MeshJoin.Editor
                     else if (binding.propertyName.StartsWith("material.", StringComparison.Ordinal))
                     {
                         if (materialAnimation == MaterialAnimationMode.DoNotOverwrite)
-                            throw new InvalidOperationException(JoinLocalization.Text($"マテリアルのアニメーションが「上書きしない」のため停止しました: {binding.propertyName}。移行する場合は結合設定で統合先または統合元の優先を選択してください。統合先の他のマテリアルにも作用する可能性があります。",
-                                $"Material Animation is set to Do Not Overwrite: {binding.propertyName}. Select Prefer Target or Prefer Source in Join Settings to migrate it. Other materials on the target may also be affected."));
+                        {
+                            if (fromSource) edits.Add(new Edit { Clip = clip, Old = binding, Remove = true, ObjectCurve = objectCurve });
+                            return;
+                        }
                     }
                     else if (fromSource) throw new InvalidOperationException(JoinLocalization.Text($"統合元Rendererの未対応アニメーションです: {binding.propertyName}", $"Unsupported source Renderer animation: {binding.propertyName}"));
                     else return;
