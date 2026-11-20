@@ -94,6 +94,6 @@ MAのAnimator統合・生成アニメーション・ボーン統合後に処理�
 
 ## アイコン
 
-コンポーネントアイコンは、指定によりMAのRuntimeスクリプトアイコンをコピーした仮アイコンです。元とは別GUIDで管理しています。後で`Mesh Join/Editor/Icons/MeshJoin.png`を差し替えられます。権利表記は`THIRD_PARTY_NOTICES.md`に収録しています。
+コンポーネントアイコンはMofToolsが用意した画像で、本体と同じ`LICENSE.md`の利用規約を適用します。`Mesh Join/Editor/Icons/MeshJoin.png`を差し替える場合は既存の.metaとGUIDを維持してください。外部依存の扱いは`THIRD_PARTY_NOTICES.md`に記載しています。
 
 シーン上のアイコンはプロジェクトごとの初回設定で非表示にします。Inspectorなどのコンポーネントアイコンは維持します。後からUnityのGizmosメニューで手動で表示を有効にした場合、その選択を再読み込み時に上書きしません。
