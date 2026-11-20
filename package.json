@@ -5,7 +5,8 @@
   "description": "NDMFによる非破壊の固定メッシュ削除・境界結合",
   "unity": "2022.3",
   "author": {
-    "name": "MofTools"
+    "name": "MofTools",
+    "email": "github-moffox@outlook.jp"
   },
   "vpmDependencies": {
     "nadena.dev.modular-avatar": ">=1.18.7",
