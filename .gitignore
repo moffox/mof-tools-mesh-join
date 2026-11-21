@@ -1,4 +1,5 @@
 /.validation/
+/.dist/
 /obj/
 /bin/
 *.csproj

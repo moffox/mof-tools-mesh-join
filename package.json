@@ -1,12 +1,17 @@
 {
   "name": "dev.moftools.mesh-join",
   "version": "0.6.1",
-  "displayName": "MofTools",
+  "displayName": "MA Mesh Join by Mof",
   "description": "NDMFによる非破壊の固定メッシュ削除・境界結合",
+  "url": "https://github.com/moffox/mof-tools-mesh-join/releases/download/v0.6.1/dev.moftools.mesh-join-0.6.1.zip",
+  "license": "LicenseRef-MofTools",
+  "documentationUrl": "https://github.com/moffox/mof-tools-mesh-join#readme",
+  "changelogUrl": "https://github.com/moffox/mof-tools-mesh-join/blob/master/CHANGELOG.md",
   "unity": "2022.3",
   "author": {
     "name": "MofTools",
-    "email": "github-moffox@outlook.jp"
+    "email": "github-moffox@outlook.jp",
+    "url": "https://github.com/moffox"
   },
   "vpmDependencies": {
     "nadena.dev.modular-avatar": ">=1.18.7",
